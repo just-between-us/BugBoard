@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      const t = localStorage.getItem('bugboard-theme')
+      if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      }
+    </script>
+    <link rel="icon" href="/BugBoard/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bug Board</title>
+    <script type="module" crossorigin src="/BugBoard/assets/index-CmjBq7Hu.js"></script>
+    <link rel="stylesheet" crossorigin href="/BugBoard/assets/index-DEzCOkdn.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
