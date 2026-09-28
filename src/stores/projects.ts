@@ -339,6 +339,28 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  const profiles = ref<Record<string, ProfileSummary>>({})
+
+  function mergeProfiles(map: Record<string, ProfileSummary>) {
+    profiles.value = { ...profiles.value, ...map }
+  }
+
+  async function loadProfiles(
+    ids: (string | null | undefined)[],
+  ): Promise<Record<string, ProfileSummary>> {
+    const fetched = await fetchProfiles(ids.filter((id): id is string => !!id))
+    mergeProfiles(fetched)
+    return fetched
+  }
+
+  function profileName(id: string): string {
+    return profiles.value[id]?.display_name ?? 'Участник'
+  }
+
+  function clearProfiles() {
+    profiles.value = {}
+  }
+
   function clearCurrentBug() {
     currentBug.value = null
     comments.value = []
@@ -450,6 +472,10 @@ export const useProjectsStore = defineStore('projects', () => {
     deleteComment,
     fetchProjectMembers,
     fetchProfiles,
+    mergeProfiles,
+    loadProfiles,
+    profileName,
+    clearProfiles,
     createProject,
     createBug,
     updateBug,
