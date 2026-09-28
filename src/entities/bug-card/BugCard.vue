@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   Database,
   Monitor,
@@ -36,7 +37,22 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const router = useRouter()
+
 const copyFeedbackId = ref<string | null>(null)
+
+function bugRoute() {
+  return {
+    name: 'bug-detail' as const,
+    params: { projectId: props.bug.project_id, bugId: props.bug.id },
+  }
+}
+
+function goToBug(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  if (target?.closest('button, a, input, textarea, [role="menuitem"]')) return
+  router.push(bugRoute())
+}
 
 async function copyToClipboard(text: string) {
   try {
@@ -139,7 +155,7 @@ function isNewBug(createdAt: string) {
 </script>
 
 <template>
-  <Card class="overflow-hidden transition-shadow hover:shadow-sm">
+  <Card class="cursor-pointer overflow-hidden transition-shadow hover:shadow-md" @click="goToBug">
     <CardContent>
       <div class="flex items-start gap-3">
         <div
@@ -152,7 +168,15 @@ function isNewBug(createdAt: string) {
           <div class="flex items-start justify-between gap-4 pb-4">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <h4 class="font-medium truncate">{{ props.bug.title }}</h4>
+                <h4 class="font-medium truncate">
+                  <RouterLink
+                    :to="bugRoute()"
+                    class="underline-offset-4 hover:underline"
+                    @click.stop
+                  >
+                    {{ props.bug.title }}
+                  </RouterLink>
+                </h4>
                 <Badge
                   v-if="isNewBug(props.bug.created_at)"
                   class="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs"
@@ -272,7 +296,8 @@ function isNewBug(createdAt: string) {
 }
 
 @keyframes eye-look {
-  0%, 100% {
+  0%,
+  100% {
     transform: rotate(0deg);
   }
   25% {

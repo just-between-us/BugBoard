@@ -38,6 +38,20 @@ export interface BugComment {
   updated_at: string
 }
 
+export interface ProfileSummary {
+  id: string
+  display_name: string
+  avatar_url: string | null
+}
+
+export interface ProjectMember {
+  id: string
+  project_id: string
+  user_id: string
+  role: 'owner' | 'member'
+  created_at: string
+}
+
 interface CreateProjectInput {
   name: string
   description?: string
@@ -57,6 +71,9 @@ export const useProjectsStore = defineStore('projects', () => {
   const projects = ref<Project[]>([])
   const currentProject = ref<Project | null>(null)
   const bugs = ref<Bug[]>([])
+  const currentBug = ref<Bug | null>(null)
+  const comments = ref<BugComment[]>([])
+  const commentsLoading = ref(false)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -120,6 +137,169 @@ export const useProjectsStore = defineStore('projects', () => {
       error.value = e instanceof Error ? e.message : 'Не удалось загрузить баги'
       bugs.value = []
     }
+  }
+
+  async function fetchBug(bugId: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('bugs')
+        .select('*')
+        .eq('id', bugId)
+        .eq('is_deleted', false)
+        .single()
+
+      if (fetchError) throw fetchError
+      return data as Bug
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Не удалось загрузить баг'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Загрузка проекта для страницы бага с учётом RLS:
+   * возвращает null, если проект скрыт политиками (не существует, удалён
+   * или текущий пользователь не имеет к нему доступа).
+   */
+  async function fetchProjectIfVisible(projectId: string): Promise<Project | null> {
+    const { data, error: fetchError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .eq('is_deleted', false)
+      .maybeSingle()
+
+    if (fetchError) throw fetchError
+    currentProject.value = data
+    return data
+  }
+
+  /**
+   * Загрузка бага в рамках конкретного проекта с учётом RLS:
+   * политика bugs_select_team_only отфильтрует строку, если пользователь
+   * не участник проекта, поэтому используем maybeSingle вместо single.
+   */
+  async function fetchBugInProject(projectId: string, bugId: string): Promise<Bug | null> {
+    const { data, error: fetchError } = await supabase
+      .from('bugs')
+      .select('*')
+      .eq('id', bugId)
+      .eq('project_id', projectId)
+      .eq('is_deleted', false)
+      .maybeSingle()
+
+    if (fetchError) throw fetchError
+    currentBug.value = data
+    return data
+  }
+
+  async function isProjectMember(projectId: string): Promise<boolean> {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return false
+
+      const { data, error: fetchError } = await supabase
+        .from('project_members')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (fetchError) return false
+      return !!data
+    } catch {
+      return false
+    }
+  }
+
+  async function fetchComments(bugId: string): Promise<BugComment[]> {
+    commentsLoading.value = true
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('bug_comments')
+        .select('*')
+        .eq('bug_id', bugId)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: true })
+
+      if (fetchError) throw fetchError
+      comments.value = data ?? []
+      return comments.value
+    } catch (e) {
+      comments.value = []
+      throw e
+    } finally {
+      commentsLoading.value = false
+    }
+  }
+
+  async function createComment(input: {
+    bug_id: string
+    project_id: string
+    content: string
+  }): Promise<BugComment> {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) throw new Error('Требуется вход в аккаунт')
+
+    const { data, error: insertError } = await supabase
+      .from('bug_comments')
+      .insert({
+        bug_id: input.bug_id,
+        project_id: input.project_id,
+        author_id: user.id,
+        content: input.content,
+      })
+      .select()
+      .single()
+
+    if (insertError) throw insertError
+    if (!data) throw new Error('Комментарий не создан')
+
+    const newComment = data as BugComment
+    comments.value.push(newComment)
+    return newComment
+  }
+
+  async function fetchProjectMembers(projectId: string): Promise<ProjectMember[]> {
+    const { data, error: fetchError } = await supabase
+      .from('project_members')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true })
+
+    if (fetchError) throw fetchError
+    return (data ?? []) as ProjectMember[]
+  }
+
+  async function fetchProfiles(ids: string[]): Promise<Record<string, ProfileSummary>> {
+    const uniqueIds = [...new Set(ids.filter(Boolean))]
+    if (uniqueIds.length === 0) return {}
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', uniqueIds)
+
+      if (fetchError) throw fetchError
+      return Object.fromEntries((data ?? []).map((p) => [p.id, p as ProfileSummary]))
+    } catch {
+      return {}
+    }
+  }
+
+  function clearCurrentBug() {
+    currentBug.value = null
+    comments.value = []
+    commentsLoading.value = false
   }
 
   async function createProject(input: CreateProjectInput) {
@@ -186,7 +366,7 @@ export const useProjectsStore = defineStore('projects', () => {
       if (!data) throw new Error('Баг не обновлён')
 
       const updatedBug = data as Bug
-      const index = bugs.value.findIndex(b => b.id === id)
+      const index = bugs.value.findIndex((b) => b.id === id)
       if (index !== -1) bugs.value[index] = updatedBug
       return updatedBug
     } catch (e) {
@@ -208,16 +388,28 @@ export const useProjectsStore = defineStore('projects', () => {
     projects,
     currentProject,
     bugs,
+    currentBug,
+    comments,
+    commentsLoading,
     loading,
     error,
     hasProjects,
     fetchProjects,
     fetchProject,
+    fetchProjectIfVisible,
+    fetchBug,
+    fetchBugInProject,
+    isProjectMember,
     fetchBugs,
+    fetchComments,
+    createComment,
+    fetchProjectMembers,
+    fetchProfiles,
     createProject,
     createBug,
     updateBug,
     clearCurrentProject,
+    clearCurrentBug,
     clearError,
   }
 })
