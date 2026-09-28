@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
+import { useProjectsStore } from './projects'
 
 interface Profile {
   id: string
@@ -37,9 +38,16 @@ export const useAuthStore = defineStore('auth', () => {
     await fetchProfile()
     loading.value = false
 
-    supabase.auth.onAuthStateChange((_event, newSession) => {
+    supabase.auth.onAuthStateChange(async (_event, newSession) => {
       session.value = newSession
-      fetchProfile()
+      await fetchProfile()
+      
+      const projectsStore = useProjectsStore()
+      if (newSession) {
+        await projectsStore.fetchProjects()
+      } else {
+        projectsStore.projects = []
+      }
     })
   }
 
@@ -57,6 +65,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (error) throw error
     session.value = data.session
     await fetchProfile()
+    
+    const projectsStore = useProjectsStore()
+    await projectsStore.fetchProjects()
   }
 
   async function signIn(email: string, password: string) {
@@ -64,12 +75,18 @@ export const useAuthStore = defineStore('auth', () => {
     if (error) throw error
     session.value = data.session
     await fetchProfile()
+    
+    const projectsStore = useProjectsStore()
+    await projectsStore.fetchProjects()
   }
 
   async function signOut() {
     await supabase.auth.signOut()
     session.value = null
     profile.value = null
+    
+    const projectsStore = useProjectsStore()
+    projectsStore.projects = []
   }
 
   return {

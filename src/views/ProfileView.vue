@@ -5,7 +5,6 @@ import { useThemeStore } from '@/stores/theme'
 import { supabase } from '@/lib/supabaseClient'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const auth = useAuthStore()
@@ -48,15 +47,14 @@ async function handleSave() {
         <CardDescription>Отображается в проектах и комментариях</CardDescription>
       </CardHeader>
       <CardContent class="space-y-4">
-        <div class="space-y-1.5">
-          <Label for="display-name">Имя</Label>
+        <div class="flex space-x-1.5">
           <Input id="display-name" v-model="displayName" type="text" />
+          <Button :disabled="saving" @click="handleSave">
+            {{ saving ? 'Сохраняем…' : 'Сохранить' }}
+          </Button>
         </div>
         <p v-if="error" class="text-sm text-severity-critical">{{ error }}</p>
         <p v-if="saved" class="text-sm text-muted-foreground">Сохранено</p>
-        <Button :disabled="saving" @click="handleSave">
-          {{ saving ? 'Сохраняем…' : 'Сохранить' }}
-        </Button>
       </CardContent>
     </Card>
 

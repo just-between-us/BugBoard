@@ -27,7 +27,7 @@ async function handleSignOut() {
 
 <template>
   <aside
-    class="flex h-screen flex-col justify-between border-r border-border bg-background text-foreground transition-all duration-200"
+    class="sticky top-0 flex h-screen flex-col justify-between border-r border-border bg-background text-foreground transition-all duration-200"
     :class="collapsed ? 'w-16' : 'w-56'"
   >
     <div>

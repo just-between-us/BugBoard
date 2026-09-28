@@ -12,7 +12,9 @@
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "deploy": "vite build && shx cp dist/index.html dist/404.html && gh-pages -d dist --dotfiles",
+    "deploy:direct": "npm run build && shx cp dist/index.html dist/404.html && npx gh-pages -d dist --nojekyll"
   },
   "dependencies": {
     "@lucide/vue": "^1.48.0",
@@ -21,6 +23,7 @@
     "@vueuse/core": "^15.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "gh-pages": "^6.3.0",
     "pinia": "^4.0.3",
     "reka-ui": "^2.10.5",
     "tailwind-merge": "^3.7.0",
