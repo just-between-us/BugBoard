@@ -6,7 +6,8 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import ProjectsView from '@/views/ProjectsView.vue'
 import ProjectView from '@/views/ProjectView.vue'
 import BugDetailView from '@/views/BugDetailView.vue'
-import ProfileView from '@/views/ProfileView.vue'
+import UserProfileView from '@/views/UserProfileView.vue'
+import SettingsView from '@/views/SettingsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -27,9 +28,25 @@ const router = createRouter({
       meta: { requiresAuth: true },
       children: [
         { path: '', name: 'projects', component: ProjectsView },
-        { path: 'projects/:id', name: 'project', component: ProjectView, meta: { requiresAuth: true } },
-        { path: 'projects/:projectId/bugs/:bugId', name: 'bug-detail', component: BugDetailView, meta: { requiresAuth: true } },
-        { path: 'profile', name: 'profile', component: ProfileView },
+        {
+          path: 'projects/:id',
+          name: 'project',
+          component: ProjectView,
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'projects/:projectId/bugs/:bugId',
+          name: 'bug-detail',
+          component: BugDetailView,
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'users/:userId',
+          name: 'user-profile',
+          component: UserProfileView,
+          meta: { requiresAuth: true },
+        },
+        { path: 'settings', name: 'settings', component: SettingsView },
       ],
     },
   ],

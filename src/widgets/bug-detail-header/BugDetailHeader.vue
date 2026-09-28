@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { CopyButton } from '@/components/copy-button'
+import { UserAvatar } from '@/components/user-avatar'
 import {
   SEVERITY_BADGE,
   SEVERITY_BG,
@@ -197,16 +198,20 @@ async function confirmEditTitle() {
           </RouterLink>
         </p>
 
-        <p class="mt-2 text-sm text-muted-foreground">
+        <p class="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
           Автор:
           <RouterLink
-            :to="{ name: 'profile', params: { id: bug.created_by } }"
-            class="font-medium text-foreground underline underline-offset-4 hover:text-primary"
+            :to="{ name: 'user-profile', params: { userId: bug.created_by } }"
+            class="inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground underline underline-offset-4 hover:text-primary"
           >
-            {{ projectsStore.profileName(bug.created_by) }}
+            <UserAvatar
+              class="h-5 w-5 text-[10px]"
+              :name="projectsStore.profileName(bug.created_by)"
+              :src="projectsStore.profileAvatar(bug.created_by)"
+            />
+            <span class="truncate">{{ projectsStore.profileName(bug.created_by) }}</span>
           </RouterLink>
         </p>
-        <!-- TODO: Сделать рабочую ссылку на автора, когда будет страница профиля -->
         <span class="mt-3 inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
           {{ bug.id }}
           <CopyButton :text="bug.id" label="Копировать ID" />

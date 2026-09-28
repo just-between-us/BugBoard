@@ -187,6 +187,7 @@ async function confirmDeleteComment() {
           :key="comment.id"
           :comment="comment"
           :author-name="projectsStore.profileName(comment.author_id)"
+          :author-avatar="projectsStore.profileAvatar(comment.author_id)"
           :is-author="isCommentAuthor(comment)"
           :editing="editingCommentId === comment.id"
           :draft="commentDraft"

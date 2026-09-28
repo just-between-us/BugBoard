@@ -4,6 +4,7 @@ import { Check, Loader2, MoreHorizontal, Pencil, Trash2 } from '@lucide/vue'
 import type { BugComment } from '@/stores/projects'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { UserAvatar } from '@/components/user-avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,11 +13,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { formatDate, initials } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 
 interface Props {
   comment: BugComment
   authorName: string
+  authorAvatar?: string | null
   isAuthor: boolean
   editing: boolean
   draft: string
@@ -57,16 +59,15 @@ watch(
 
 <template>
   <article class="flex gap-3">
-    <div
-      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary"
-    >
-      {{ initials(authorName) }}
-    </div>
+    <UserAvatar class="h-8 w-8 text-xs" :name="authorName" :src="authorAvatar" />
     <div class="min-w-0 flex-1">
       <div class="flex flex-wrap items-baseline gap-2">
-        <span class="truncate text-sm font-medium">
+        <RouterLink
+          :to="{ name: 'user-profile', params: { userId: comment.author_id } }"
+          class="truncate text-sm font-medium underline-offset-4 hover:underline"
+        >
           {{ authorName }}
-        </span>
+        </RouterLink>
         <span class="text-xs text-muted-foreground">
           {{ formatDate(comment.created_at) }}
         </span>

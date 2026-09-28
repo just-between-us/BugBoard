@@ -31,6 +31,7 @@ import {
 
 interface Props {
   bug: Bug
+  projectName?: string | null
 }
 
 const props = defineProps<Props>()
@@ -195,6 +196,9 @@ function isNewBug(createdAt: string) {
             <div class="flex justify-between">
               <span class="flex items-center gap-3">
                 <span>Создан: {{ formatDate(props.bug.created_at) }}</span>
+                <span v-if="props.projectName" class="truncate"
+                  >Проект: {{ props.projectName }}</span
+                >
                 <span class="font-medium text-foreground">{{ getAreaLabel(props.bug.area) }}</span>
               </span>
               <TooltipProvider>

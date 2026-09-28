@@ -44,6 +44,14 @@ export interface ProfileSummary {
   avatar_url: string | null
 }
 
+export interface PublicProfile extends ProfileSummary {
+  created_at: string
+}
+
+export interface BugWithProject extends Bug {
+  projects: { id: string; name: string } | null
+}
+
 export interface ProjectMember {
   id: string
   project_id: string
@@ -357,8 +365,48 @@ export const useProjectsStore = defineStore('projects', () => {
     return profiles.value[id]?.display_name ?? 'Участник'
   }
 
+  function profileAvatar(id: string): string | null {
+    return profiles.value[id]?.avatar_url ?? null
+  }
+
   function clearProfiles() {
     profiles.value = {}
+  }
+
+  /**
+   * Профиль пользователя для страницы просмотра. Политика
+   * profiles_select_all_authenticated разрешает читать профили всем
+   * вошедшим, поэтому возвращает null только если пользователя не существует.
+   */
+  async function fetchProfileById(id: string): Promise<PublicProfile | null> {
+    const { data, error: fetchError } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url, created_at')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (fetchError) throw fetchError
+    if (data) {
+      mergeProfiles({ [data.id]: data as ProfileSummary })
+    }
+    return (data as PublicProfile | null) ?? null
+  }
+
+  /**
+   * Баги, созданные пользователем. RLS bugs_select_team_only оставит только
+   * те, что видит текущий зритель; имя проекта подтягивается встроенной
+   * выборкой — проект виден, если виден сам баг.
+   */
+  async function fetchBugsByAuthor(authorId: string): Promise<BugWithProject[]> {
+    const { data, error: fetchError } = await supabase
+      .from('bugs')
+      .select('*, projects ( id, name )')
+      .eq('created_by', authorId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+
+    if (fetchError) throw fetchError
+    return (data ?? []) as unknown as BugWithProject[]
   }
 
   function clearCurrentBug() {
@@ -475,7 +523,10 @@ export const useProjectsStore = defineStore('projects', () => {
     mergeProfiles,
     loadProfiles,
     profileName,
+    profileAvatar,
     clearProfiles,
+    fetchProfileById,
+    fetchBugsByAuthor,
     createProject,
     createBug,
     updateBug,

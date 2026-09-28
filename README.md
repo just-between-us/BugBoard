@@ -20,12 +20,13 @@
 
 ### Приватная часть (требует входа)
 
-- **Сайдбар навигации** — сворачиваемый, с иконками: Проекты, Профиль
+- **Сайдбар навигации** — сворачиваемый, с иконками: Проекты, Настройки; блок пользователя ведёт на его профиль
 - **Проекты** — список проектов, создание проекта (RPC `create_project`), карточка проекта с описанием и вкладками
 - **Страница проекта** — баги с фильтрами (статус, важность, область, поиск) и сортировкой, создание бага; вкладки «Репорты», «Участники», «Настройки» — заглушки
 - **Страница бага** — inline-редактирование заголовка и описания, кнопка «Вернуть изменения», атрибуты (статус, важность, область, автор) с автосохранением
 - **Комментарии** — создание, редактирование и удаление (только автор, soft delete), inline-подтверждение удаления
-- **Профиль** — изменение отображаемого имени, переключение темы (светлая/тёмная/системная)
+- **Профиль пользователя** — публичная страница `/app/users/:userId`: имя, дата регистрации, созданные баги (только видимые вам)
+- **Настройки** — изменение отображаемого имени, загрузка аватарки (JPG/PNG/WebP, ≤ 2 МБ), переключение темы (светлая/тёмная/системная)
 - **Header** — лого, переключатель темы, ссылки на вход/создание команды
 
 ## Запуск
@@ -81,6 +82,7 @@ src/
 ├── assets/main.css          # Глобальные стили, Tailwind тема, CSS переменные
 ├── components/
 │   ├── layout/              # AppHeader, AppSidebar
+│   ├── user-avatar/         # Аватар с фолбэком на инициалы
 │   └── ui/                  # shadcn/ui компоненты (Button, Input, Card, Tooltip, Label...)
 ├── entities/
 │   ├── bug/                 # Метаданные бага: статусы, важность, области, бейджи, иконки
@@ -93,7 +95,7 @@ src/
 │   └── format.ts            # formatDate(), initials(), toUserError()
 ├── router/index.ts          # Маршруты, защита auth-маршрутов
 ├── stores/
-│   ├── auth.ts              # Pinia store: сессия, профиль, signIn/signUp/signOut
+│   ├── auth.ts              # Pinia store: сессия, профиль, signIn/signUp/signOut, uploadAvatar
 │   ├── projects.ts          # Pinia store: проекты, баги, комментарии, участники, профили
 │   └── theme.ts             # Pinia store: тема (light/dark/system), localStorage
 ├── views/                   # Тонкие обёртки над page-виджетами
@@ -102,7 +104,8 @@ src/
 │   ├── ProjectsView.vue     # Список проектов + создание
 │   ├── ProjectView.vue      # Страница проекта
 │   ├── BugDetailView.vue    # Страница бага
-│   └── ProfileView.vue      # Профиль пользователя
+│   ├── UserProfileView.vue  # Просмотр профиля пользователя
+│   └── SettingsView.vue     # Настройки (имя, тема)
 ├── widgets/                 # Страницы и их блоки (Feature-Sliced Design)
 │   ├── project-view-page/   # Страница проекта
 │   ├── project-tabs/        # Вкладки проекта
@@ -114,7 +117,8 @@ src/
 │   ├── bug-detail-description/
 │   ├── bug-detail-comments/ # Комментарии (в т.ч. BugCommentItem)
 │   ├── bug-detail-sidebar/  # Атрибуты и детали бага
-│   └── bug-detail-skeleton/
+│   ├── bug-detail-skeleton/
+│   └── user-profile-page/   # Профиль пользователя
 ├── App.vue                  # Корневой компонент (RouterView)
 └── main.ts                  # Точка входа, инициализация Pinia, Router, Auth
 ```
@@ -345,6 +349,51 @@ grant execute on function public.create_project(text, text, boolean) to authenti
 - `security definer` обходит RLS, выполняя функцию от имени владельца (postgres)
 - Нет race conditions: между двумя запросами с фронтенда может пройти время, пользователь закроет вкладку, сеть упадёт
 - Чистый контракт: фронтенд вызывает `rpc('create_project', {...})` и получает готовый проект с `id`
+
+### Хранилище (Storage) — аватарки
+
+**Бакет `avatars`** — публичные аватарки пользователей:
+
+```sql
+-- public bucket: avatars are not sensitive, a public URL is fine
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+-- anyone can read (redundant with public bucket, but covers the API path too)
+create policy "avatars_public_read"
+  on storage.objects for select
+  using (bucket_id = 'avatars');
+
+-- a user may only write into a folder named after their own id: avatars/{user_id}/...
+create policy "avatars_insert_own"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "avatars_update_own"
+  on storage.objects for update
+  using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "avatars_delete_own"
+  on storage.objects for delete
+  using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+```
+
+**Контракт фронта:**
+
+- путь файла всегда `{user_id}/avatar.{расширение}` + `upsert: true` — повторная загрузка перезаписывает файл, а не плодит новые
+- к публичному URL приклеивается `?t=${Date.now()}` — иначе браузер закэширует старую картинку по тому же адресу и после замены аватара будет видно старое фото
+- валидация типа и размера (2 МБ) — только на клиенте, это UX, а не защита; настоящая граница безопасности — RLS-политика, не пускающая запись в чужую папку `{user_id}/`
+- в проде стоит дополнительно ограничить бакет (`file_size_limit`, `allowed_mime_types` в `storage.buckets`)
 
 ## Скрипты package.json
 

@@ -3,7 +3,8 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
-import { FolderKanban, User, PanelLeft, LogOut } from '@lucide/vue'
+import { FolderKanban, Settings, PanelLeft, LogOut } from '@lucide/vue'
+import { UserAvatar } from '@/components/user-avatar'
 
 const collapsed = ref(false)
 const router = useRouter()
@@ -11,13 +12,12 @@ const auth = useAuthStore()
 
 const navItems = [
   { label: 'Проекты', to: '/app', icon: FolderKanban },
-  { label: 'Профиль', to: '/app/profile', icon: User },
+  { label: 'Настройки', to: '/app/settings', icon: Settings },
 ]
 
-const initials = computed(() => {
-  const name = auth.profile?.display_name ?? auth.user?.email ?? '?'
-  return name.trim().slice(0, 2).toUpperCase()
-})
+const userName = computed(() => auth.profile?.display_name ?? auth.user?.email ?? '?')
+
+const profileLink = computed(() => (auth.user ? `/app/users/${auth.user.id}` : '/app/settings'))
 
 async function handleSignOut() {
   await auth.signOut()
@@ -60,16 +60,16 @@ async function handleSignOut() {
     <div class="border-t border-border p-2">
       <div class="flex items-center gap-2" :class="collapsed && 'justify-center'">
         <RouterLink
-          to="/app/profile"
+          :to="profileLink"
           class="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-card"
         >
-          <span
-            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-card font-mono text-xs"
-          >
-            {{ initials }}
-          </span>
+          <UserAvatar
+            class="h-7 w-7 text-xs font-mono"
+            :name="userName"
+            :src="auth.profile?.avatar_url"
+          />
           <span v-if="!collapsed" class="min-w-0 flex-1 truncate text-left text-sm">
-            {{ auth.profile?.display_name ?? auth.user?.email }}
+            {{ userName }}
           </span>
         </RouterLink>
         <Button v-if="!collapsed" variant="ghost" size="icon" @click="handleSignOut">

@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { Camera, Loader2 } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { supabase } from '@/lib/supabaseClient'
+import { toUserError } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { UserAvatar } from '@/components/user-avatar'
 
 const auth = useAuthStore()
 const theme = useThemeStore()
@@ -14,6 +17,13 @@ const displayName = ref(auth.profile?.display_name ?? '')
 const saving = ref(false)
 const saved = ref(false)
 const error = ref('')
+
+const avatarInput = ref<HTMLInputElement | null>(null)
+const avatarUploading = ref(false)
+const avatarSaved = ref(false)
+const avatarError = ref('')
+
+const avatarName = computed(() => auth.profile?.display_name ?? auth.user?.email ?? '?')
 
 async function handleSave() {
   if (!auth.user) return
@@ -34,12 +44,69 @@ async function handleSave() {
   }
   saving.value = false
 }
+
+function openAvatarPicker() {
+  avatarInput.value?.click()
+}
+
+async function handleAvatarChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  avatarUploading.value = true
+  avatarSaved.value = false
+  avatarError.value = ''
+
+  try {
+    await auth.uploadAvatar(file)
+    avatarSaved.value = true
+  } catch (e) {
+    avatarError.value = toUserError(e)
+  } finally {
+    avatarUploading.value = false
+  }
+}
 </script>
 
 <template>
   <div class="mx-auto max-w-xl px-6 py-10">
-    <h1 class="text-2xl font-semibold">Профиль</h1>
+    <h1 class="text-2xl font-semibold">Настройки</h1>
     <p class="mt-1 text-sm text-muted-foreground">{{ auth.user?.email }}</p>
+
+    <Card class="mt-6">
+      <CardHeader>
+        <CardTitle class="text-base">Аватар</CardTitle>
+        <CardDescription>JPG, PNG или WebP, до 2 МБ</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div class="flex items-center gap-4">
+          <UserAvatar
+            class="h-16 w-16 text-xl"
+            :name="avatarName"
+            :src="auth.profile?.avatar_url"
+          />
+          <div class="space-y-1.5">
+            <input
+              ref="avatarInput"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              class="hidden"
+              @change="handleAvatarChange"
+            />
+            <Button variant="outline" :disabled="avatarUploading" @click="openAvatarPicker">
+              <Loader2 v-if="avatarUploading" class="animate-spin" />
+              <Camera v-else class="h-4 w-4" />
+              {{ avatarUploading ? 'Загружаем…' : 'Загрузить' }}
+            </Button>
+            <p class="text-xs text-muted-foreground">Повторная загрузка заменяет текущий аватар</p>
+          </div>
+        </div>
+        <p v-if="avatarError" class="mt-3 text-sm text-severity-critical">{{ avatarError }}</p>
+        <p v-if="avatarSaved" class="mt-3 text-sm text-muted-foreground">Сохранено</p>
+      </CardContent>
+    </Card>
 
     <Card class="mt-6">
       <CardHeader>

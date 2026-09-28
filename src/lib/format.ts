@@ -8,6 +8,14 @@ export function formatDate(dateString: string) {
   })
 }
 
+export function formatDateOnly(dateString: string) {
+  return new Date(dateString).toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2)
   const result = parts.map((p) => p.charAt(0).toUpperCase()).join('')
