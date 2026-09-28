@@ -43,14 +43,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { CopyButton } from '@/components/copy-button'
 
 type PageState = 'loading' | 'ready' | 'no-project' | 'no-bug' | 'no-access' | 'error'
@@ -528,10 +520,6 @@ async function confirmDeleteComment() {
   }
 }
 
-function onCommentDialogOpen(open: boolean) {
-  if (!open) closeDeleteDialog()
-}
-
 const backLabel = computed(() => {
   return state.value === 'no-project' || state.value === 'no-access'
     ? 'К проектам'
@@ -1001,6 +989,43 @@ onBeforeUnmount(() => {
                       </DropdownMenu>
                     </div>
 
+                    <div
+                      v-if="deleteTarget?.id === comment.id"
+                      class="mt-2 rounded-md border border-severity-critical/40 bg-severity-critical/5 p-3"
+                      role="alertdialog"
+                      aria-label="Подтверждение удаления комментария"
+                    >
+                      <p class="text-sm font-medium">Удалить комментарий?</p>
+                      <p class="mt-1 text-xs text-muted-foreground">
+                        Комментарий будет скрыт у всех участников. Отменить действие нельзя.
+                      </p>
+                      <p v-if="commentActionError" class="mt-1 text-xs text-severity-critical">
+                        {{ commentActionError }}
+                      </p>
+                      <div class="mt-2 flex flex-wrap gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          class="h-8"
+                          :disabled="deleteSaving"
+                          @click="confirmDeleteComment"
+                        >
+                          <Loader2 v-if="deleteSaving" class="h-4 w-4 animate-spin" />
+                          <Trash2 v-else class="h-4 w-4" />
+                          {{ deleteSaving ? 'Удаляем…' : 'Удалить' }}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          class="h-8"
+                          :disabled="deleteSaving"
+                          @click="closeDeleteDialog"
+                        >
+                          Отмена
+                        </Button>
+                      </div>
+                    </div>
+
                     <template v-if="editingCommentId === comment.id">
                       <Textarea
                         ref="commentTextareaRef"
@@ -1281,39 +1306,6 @@ onBeforeUnmount(() => {
           </Card>
         </div>
       </div>
-
-      <!-- Delete comment confirmation -->
-      <Dialog :open="!!deleteTarget" @update:open="onCommentDialogOpen">
-        <DialogContent class="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Удалить комментарий?</DialogTitle>
-            <DialogDescription>
-              Комментарий будет скрыт у всех участников. Отменить это действие нельзя.
-            </DialogDescription>
-          </DialogHeader>
-
-          <p
-            v-if="deleteTarget"
-            class="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-sm"
-          >
-            {{ deleteTarget.content }}
-          </p>
-
-          <p v-if="commentActionError" class="text-xs text-severity-critical">
-            {{ commentActionError }}
-          </p>
-
-          <DialogFooter>
-            <Button variant="ghost" :disabled="deleteSaving" @click="onCommentDialogOpen(false)">
-              Отмена
-            </Button>
-            <Button variant="destructive" :disabled="deleteSaving" @click="confirmDeleteComment">
-              <Loader2 v-if="deleteSaving" class="h-4 w-4 animate-spin" />
-              {{ deleteSaving ? 'Удаляем…' : 'Удалить' }}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </template>
   </div>
 </template>
