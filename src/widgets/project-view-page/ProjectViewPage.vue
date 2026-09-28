@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { onMounted, watch, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, AlertTriangle, Users, Settings } from '@lucide/vue'
+import { ChevronLeft, AlertTriangle, Settings } from '@lucide/vue'
 import { useProjectsStore } from '@/stores/projects'
 import { Button } from '@/components/ui/button'
 import ProjectHeader from '@/widgets/project-header/ProjectHeader.vue'
 import ProjectTabs from '@/widgets/project-tabs/ProjectTabs.vue'
 import BugsFilters from '@/widgets/bugs-filters/BugsFilters.vue'
 import BugList from '@/widgets/bug-list/BugList.vue'
+import ProjectMembers from '@/widgets/project-members/ProjectMembers.vue'
 import CreateBugDialog from '@/widgets/create-bug-dialog/CreateBugDialog.vue'
 
 const route = useRoute()
@@ -155,7 +156,10 @@ watch(
     <ProjectHeader />
 
     <!-- Loading Project (when no current project yet) -->
-    <div v-if="!projectsStore.currentProject && projectsStore.loading" class="animate-pulse space-y-4">
+    <div
+      v-if="!projectsStore.currentProject && projectsStore.loading"
+      class="animate-pulse space-y-4"
+    >
       <div class="h-12 w-3/4 bg-muted rounded-lg" />
       <div class="h-4 w-1/2 bg-muted rounded" />
     </div>
@@ -204,10 +208,10 @@ watch(
       />
 
       <!-- Other Tabs Placeholders -->
-      <div
-        v-else-if="activeTab === 'reports'"
-        class="text-center py-12"
-      >
+      <!-- Members -->
+      <ProjectMembers v-else-if="activeTab === 'members'" :project-id="projectId" />
+
+      <div v-else-if="activeTab === 'reports'" class="text-center py-12">
         <AlertTriangle class="mx-auto h-12 w-12 text-muted-foreground/50" />
         <h3 class="mt-4 text-lg font-medium">Репорты</h3>
         <p class="mt-1 text-sm text-muted-foreground">
@@ -215,19 +219,7 @@ watch(
         </p>
       </div>
 
-      <div
-        v-else-if="activeTab === 'members'"
-        class="text-center py-12"
-      >
-        <Users class="mx-auto h-12 w-12 text-muted-foreground/50" />
-        <h3 class="mt-4 text-lg font-medium">Участники</h3>
-        <p class="mt-1 text-sm text-muted-foreground">Управление участниками проекта</p>
-      </div>
-
-      <div
-        v-else-if="activeTab === 'settings'"
-        class="text-center py-12"
-      >
+      <div v-else-if="activeTab === 'settings'" class="text-center py-12">
         <Settings class="mx-auto h-12 w-12 text-muted-foreground/50" />
         <h3 class="mt-4 text-lg font-medium">Настройки</h3>
         <p class="mt-1 text-sm text-muted-foreground">Настройки проекта</p>

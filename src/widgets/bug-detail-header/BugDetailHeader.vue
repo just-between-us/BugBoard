@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { CopyButton } from '@/components/copy-button'
-import { UserAvatar } from '@/components/user-avatar'
+import { Avatar } from '@/components/avatar'
 import {
   SEVERITY_BADGE,
   SEVERITY_BG,
@@ -204,7 +204,7 @@ async function confirmEditTitle() {
             :to="{ name: 'user-profile', params: { userId: bug.created_by } }"
             class="inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground underline underline-offset-4 hover:text-primary"
           >
-            <UserAvatar
+            <Avatar
               class="h-5 w-5 text-[10px]"
               :name="projectsStore.profileName(bug.created_by)"
               :src="projectsStore.profileAvatar(bug.created_by)"

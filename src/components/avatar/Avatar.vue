@@ -12,6 +12,8 @@ interface Props {
 
 const props = defineProps<Props>()
 
+defineOptions({ name: 'EntityAvatar' })
+
 const imgFailed = ref(false)
 
 watch(

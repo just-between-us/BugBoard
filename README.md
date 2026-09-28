@@ -21,8 +21,10 @@
 ### Приватная часть (требует входа)
 
 - **Сайдбар навигации** — сворачиваемый, с иконками: Проекты, Настройки; блок пользователя ведёт на его профиль
-- **Проекты** — список проектов, создание проекта (RPC `create_project`), карточка проекта с описанием и вкладками
-- **Страница проекта** — баги с фильтрами (статус, важность, область, поиск) и сортировкой, создание бага; вкладки «Репорты», «Участники», «Настройки» — заглушки
+- **Проекты** — список проектов, создание проекта (RPC `create_project`), карточка проекта с описанием, аватаром и вкладками
+- **Страница проекта** — баги с фильтрами (статус, важность, область, поиск) и сортировкой, создание бага; вкладки «Репорты», «Настройки» — заглушки
+- **Аватар проекта** — загрузка из шапки проекта (JPG/PNG/WebP, ≤ 2 МБ); менять может любой участник команды
+- **Участники** — список с ролями и аватарами, ссылки на профили; добавление и удаление (только владелец, по RLS), inline-подтверждение удаления
 - **Страница бага** — inline-редактирование заголовка и описания, кнопка «Вернуть изменения», атрибуты (статус, важность, область, автор) с автосохранением
 - **Комментарии** — создание, редактирование и удаление (только автор, soft delete), inline-подтверждение удаления
 - **Профиль пользователя** — публичная страница `/app/users/:userId`: имя, дата регистрации, созданные баги (только видимые вам)
@@ -82,7 +84,7 @@ src/
 ├── assets/main.css          # Глобальные стили, Tailwind тема, CSS переменные
 ├── components/
 │   ├── layout/              # AppHeader, AppSidebar
-│   ├── user-avatar/         # Аватар с фолбэком на инициалы
+│   ├── avatar/               # Аватар с фолбэком на инициалы (пользователи и проекты)
 │   └── ui/                  # shadcn/ui компоненты (Button, Input, Card, Tooltip, Label...)
 ├── entities/
 │   ├── bug/                 # Метаданные бага: статусы, важность, области, бейджи, иконки
@@ -92,7 +94,8 @@ src/
 ├── lib/
 │   ├── supabaseClient.ts    # Инициализация Supabase клиента
 │   ├── utils.ts             # cn() — утилита для классов (clsx + tailwind-merge)
-│   └── format.ts            # formatDate(), initials(), toUserError()
+│   ├── format.ts            # formatDate(), initials(), toUserError()
+│   └── avatar.ts            # validateAvatarFile(), avatarExtension(), withCacheBust()
 ├── router/index.ts          # Маршруты, защита auth-маршрутов
 ├── stores/
 │   ├── auth.ts              # Pinia store: сессия, профиль, signIn/signUp/signOut, uploadAvatar
@@ -118,6 +121,7 @@ src/
 │   ├── bug-detail-comments/ # Комментарии (в т.ч. BugCommentItem)
 │   ├── bug-detail-sidebar/  # Атрибуты и детали бага
 │   ├── bug-detail-skeleton/
+│   ├── project-members/     # Участники проекта (список, добавление, удаление)
 │   └── user-profile-page/   # Профиль пользователя
 ├── App.vue                  # Корневой компонент (RouterView)
 └── main.ts                  # Точка входа, инициализация Pinia, Router, Auth
@@ -388,12 +392,61 @@ create policy "avatars_delete_own"
   );
 ```
 
-**Контракт фронта:**
+**Бакет `project-avatars`** — публичные аватарки проектов:
+
+```sql
+-- 1. new column on projects
+alter table public.projects
+  add column if not exists avatar_url text;
+
+-- 2. bucket for project avatars (public read, same as user avatars)
+insert into storage.buckets (id, name, public)
+values ('project-avatars', 'project-avatars', true)
+on conflict (id) do nothing;
+
+-- 3. anyone can read
+create policy "project_avatars_public_read"
+  on storage.objects for select
+  using (bucket_id = 'project-avatars');
+
+-- 4. any team member (not just the owner) can upload/replace/delete —
+--    reuses the same is_project_member() function as the rest of the schema.
+--    File path convention: {project_id}/avatar.{ext}
+create policy "project_avatars_insert_team"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'project-avatars'
+    and public.is_project_member(((storage.foldername(name))[1])::uuid)
+  );
+
+create policy "project_avatars_update_team"
+  on storage.objects for update
+  using (
+    bucket_id = 'project-avatars'
+    and public.is_project_member(((storage.foldername(name))[1])::uuid)
+  );
+
+create policy "project_avatars_delete_team"
+  on storage.objects for delete
+  using (
+    bucket_id = 'project-avatars'
+    and public.is_project_member(((storage.foldername(name))[1])::uuid)
+  );
+```
+
+**Контракт фронта (пользовательский аватар):**
 
 - путь файла всегда `{user_id}/avatar.{расширение}` + `upsert: true` — повторная загрузка перезаписывает файл, а не плодит новые
 - к публичному URL приклеивается `?t=${Date.now()}` — иначе браузер закэширует старую картинку по тому же адресу и после замены аватара будет видно старое фото
 - валидация типа и размера (2 МБ) — только на клиенте, это UX, а не защита; настоящая граница безопасности — RLS-политика, не пускающая запись в чужую папку `{user_id}/`
 - в проде стоит дополнительно ограничить бакет (`file_size_limit`, `allowed_mime_types` в `storage.buckets`)
+
+**Контракт фронта (аватар проекта)** — отличия от пользовательского:
+
+- путь файла `{project_id}/avatar.{расширение}` + `upsert: true`
+- политика проверяет `is_project_member(folder::uuid)`, а не `auth.uid() = folder` — **любой участник команды** может заменить аватар проекта, не только владелец
+- после загрузки файл URL пишется в `projects.avatar_url` (обновляет любой участник, `projects_update_members`); без записи в БД картинка загрузилась бы, но не отобразилась бы
+- общий код валидации/кэш-бастера — `src/lib/avatar.ts`, используется и user-аватаром
 
 ## Скрипты package.json
 

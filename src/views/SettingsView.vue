@@ -8,7 +8,7 @@ import { toUserError } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { UserAvatar } from '@/components/user-avatar'
+import { Avatar } from '@/components/avatar'
 
 const auth = useAuthStore()
 const theme = useThemeStore()
@@ -82,11 +82,7 @@ async function handleAvatarChange(event: Event) {
       </CardHeader>
       <CardContent>
         <div class="flex items-center gap-4">
-          <UserAvatar
-            class="h-16 w-16 text-xl"
-            :name="avatarName"
-            :src="auth.profile?.avatar_url"
-          />
+          <Avatar class="h-16 w-16 text-xl" :name="avatarName" :src="auth.profile?.avatar_url" />
           <div class="space-y-1.5">
             <input
               ref="avatarInput"

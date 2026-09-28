@@ -4,7 +4,7 @@ import { Check, Loader2, MoreHorizontal, Pencil, Trash2 } from '@lucide/vue'
 import type { BugComment } from '@/stores/projects'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { UserAvatar } from '@/components/user-avatar'
+import { Avatar } from '@/components/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,7 +59,7 @@ watch(
 
 <template>
   <article class="flex gap-3">
-    <UserAvatar class="h-8 w-8 text-xs" :name="authorName" :src="authorAvatar" />
+    <Avatar class="h-8 w-8 text-xs" :name="authorName" :src="authorAvatar" />
     <div class="min-w-0 flex-1">
       <div class="flex flex-wrap items-baseline gap-2">
         <RouterLink

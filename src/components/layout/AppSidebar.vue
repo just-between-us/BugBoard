@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { FolderKanban, Settings, PanelLeft, LogOut } from '@lucide/vue'
-import { UserAvatar } from '@/components/user-avatar'
+import { Avatar } from '@/components/avatar'
 
 const collapsed = ref(false)
 const router = useRouter()
@@ -63,7 +63,7 @@ async function handleSignOut() {
           :to="profileLink"
           class="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-card"
         >
-          <UserAvatar
+          <Avatar
             class="h-7 w-7 text-xs font-mono"
             :name="userName"
             :src="auth.profile?.avatar_url"

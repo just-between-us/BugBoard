@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { Bug, Globe, Lock, Settings, Trash2, MoreHorizontal } from '@lucide/vue'
+import { Globe, Lock, Settings, Trash2, MoreHorizontal, Camera, Loader2 } from '@lucide/vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
+import { Avatar } from '@/components/avatar'
+import { toUserError } from '@/lib/format'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import {
   DropdownMenu,
@@ -32,6 +35,37 @@ function isOwner() {
   return projectsStore.currentProject?.owner_id === authStore.user?.id
 }
 
+/** Аватар проекта может менять любой участник (RLS is_project_member), не только владелец. */
+const canEditAvatar = ref(false)
+const avatarInput = ref<HTMLInputElement | null>(null)
+const uploadingAvatar = ref(false)
+const avatarError = ref<string | null>(null)
+
+function pickAvatar() {
+  avatarInput.value?.click()
+}
+
+async function handleAvatarFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  uploadingAvatar.value = true
+  avatarError.value = null
+  try {
+    await projectsStore.uploadProjectAvatar(route.params.id as string, file)
+  } catch (e) {
+    avatarError.value = toUserError(e)
+  } finally {
+    uploadingAvatar.value = false
+  }
+}
+
+onMounted(async () => {
+  canEditAvatar.value = await projectsStore.isProjectMember(route.params.id as string)
+})
+
 async function confirmDelete() {
   if (!confirm('Удалить проект? Это действие нельзя отменить.')) return
   alert('Удаление проекта будет реализовано позже')
@@ -43,10 +77,32 @@ async function confirmDelete() {
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
       <div class="flex-1 min-w-0">
         <div class="flex items-start gap-4 flex-wrap">
-          <div
-            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
-          >
-            <Bug class="h-6 w-6" />
+          <div class="relative h-12 w-12 shrink-0">
+            <Avatar
+              class="h-12 w-12 rounded-xl text-base"
+              :name="projectsStore.currentProject.name"
+              :src="projectsStore.currentProject.avatar_url"
+            />
+            <button
+              v-if="canEditAvatar"
+              type="button"
+              class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground disabled:opacity-50"
+              :disabled="uploadingAvatar"
+              :title="
+                projectsStore.currentProject.avatar_url ? 'Сменить аватар' : 'Загрузить аватар'
+              "
+              @click="pickAvatar"
+            >
+              <Loader2 v-if="uploadingAvatar" class="h-3 w-3 animate-spin" />
+              <Camera v-else class="h-3 w-3" />
+            </button>
+            <input
+              ref="avatarInput"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              class="hidden"
+              @change="handleAvatarFile"
+            />
           </div>
           <div class="min-w-0">
             <h1 class="text-2xl font-semibold tracking-tight truncate">
@@ -57,6 +113,9 @@ async function confirmDelete() {
               class="mt-1 text-sm text-muted-foreground line-clamp-2"
             >
               {{ projectsStore.currentProject.description }}
+            </p>
+            <p v-if="avatarError" class="mt-1 text-xs text-severity-critical">
+              {{ avatarError }}
             </p>
             <div
               class="mt-4 flex items-center justify-between flex-wrap gap-2 text-xs text-muted-foreground"

@@ -9,7 +9,7 @@ import { formatDateOnly, toUserError } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { UserAvatar } from '@/components/user-avatar'
+import { Avatar } from '@/components/avatar'
 import BugCard from '@/entities/bug-card/BugCard.vue'
 
 type PageState = 'loading' | 'ready' | 'not-found' | 'error'
@@ -135,7 +135,7 @@ watch(userId, load, { immediate: true })
     <template v-else-if="profile">
       <Card class="gap-4">
         <CardContent class="flex flex-wrap items-center gap-4">
-          <UserAvatar
+          <Avatar
             class="h-16 w-16 text-xl"
             :name="profile.display_name"
             :src="profile.avatar_url"

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabaseClient'
+import { avatarExtension, validateAvatarFile, withCacheBust } from '@/lib/avatar'
 
 export interface Project {
   id: string
@@ -8,6 +9,7 @@ export interface Project {
   description: string | null
   is_public: boolean
   owner_id: string
+  avatar_url: string | null
   is_deleted: boolean
   created_at: string
   updated_at: string
@@ -330,6 +332,53 @@ export const useProjectsStore = defineStore('projects', () => {
     return (data ?? []) as ProjectMember[]
   }
 
+  /**
+   * Все профили — для выпадающего списка «Добавить участника».
+   * Политика profiles_select_all_authenticated разрешает читать всем вошедшим.
+   */
+  async function fetchAllProfiles(): Promise<ProfileSummary[]> {
+    const { data, error: fetchError } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url')
+      .order('display_name')
+
+    if (fetchError) throw fetchError
+    return (data ?? []) as ProfileSummary[]
+  }
+
+  /**
+   * Добавление участника. Политика members_insert_owner_only пропустит
+   * только владельца проекта (RLS вернёт 42501), дубль отсекает unique
+   * (project_id, user_id) — 23505.
+   */
+  async function addProjectMember(projectId: string, userId: string): Promise<void> {
+    const { error: insertError } = await supabase
+      .from('project_members')
+      .insert({ project_id: projectId, user_id: userId, role: 'member' })
+
+    if (insertError) {
+      if (insertError.code === '23505') throw new Error('Этот пользователь уже участник')
+      throw insertError
+    }
+  }
+
+  /**
+   * Удаление участника. Политика members_delete_owner_only: PostgREST при
+   * запрете вернёт 0 строк без ошибки — проверяем явно (как в deleteComment).
+   */
+  async function removeProjectMember(memberId: string): Promise<void> {
+    const { data, error: deleteError } = await supabase
+      .from('project_members')
+      .delete()
+      .eq('id', memberId)
+      .select('id')
+
+    if (deleteError) throw deleteError
+    if (!data || data.length === 0) {
+      throw new Error('Участник не найден или нет прав на удаление')
+    }
+  }
+
   async function fetchProfiles(ids: string[]): Promise<Record<string, ProfileSummary>> {
     const uniqueIds = [...new Set(ids.filter(Boolean))]
     if (uniqueIds.length === 0) return {}
@@ -436,6 +485,48 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  /**
+   * Загрузка аватарки проекта в бакет project-avatars: {project_id}/avatar.{ext}
+   * + upsert, публичный URL с cache-buster. Право есть у любого участника
+   * команды (is_project_member), а не только владельца — в отличие от
+   * пользовательского аватара, где папка {user_id} и auth.uid().
+   */
+  async function uploadProjectAvatar(projectId: string, file: File): Promise<string> {
+    validateAvatarFile(file)
+
+    const path = `${projectId}/avatar.${avatarExtension(file.type)}`
+    const { error: uploadError } = await supabase.storage
+      .from('project-avatars')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (uploadError) throw uploadError
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('project-avatars').getPublicUrl(path)
+    const avatarUrl = withCacheBust(publicUrl)
+
+    const { data: updated, error: updateError } = await supabase
+      .from('projects')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', projectId)
+      .eq('is_deleted', false)
+      .select('id')
+      .maybeSingle()
+    if (updateError) throw updateError
+    if (!updated) {
+      throw new Error('Нет прав на обновление проекта')
+    }
+
+    if (currentProject.value?.id === projectId) {
+      currentProject.value = { ...currentProject.value, avatar_url: avatarUrl }
+    }
+    const inList = projects.value.find((p) => p.id === projectId)
+    if (inList) {
+      inList.avatar_url = avatarUrl
+    }
+    return avatarUrl
+  }
+
   async function createBug(input: CreateBugInput) {
     error.value = null
     try {
@@ -519,6 +610,9 @@ export const useProjectsStore = defineStore('projects', () => {
     updateComment,
     deleteComment,
     fetchProjectMembers,
+    fetchAllProfiles,
+    addProjectMember,
+    removeProjectMember,
     fetchProfiles,
     mergeProfiles,
     loadProfiles,
@@ -528,6 +622,7 @@ export const useProjectsStore = defineStore('projects', () => {
     fetchProfileById,
     fetchBugsByAuthor,
     createProject,
+    uploadProjectAvatar,
     createBug,
     updateBug,
     clearCurrentProject,

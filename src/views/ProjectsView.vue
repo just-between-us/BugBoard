@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { Plus, FolderKanban, Globe, Lock, Loader2 } from '@lucide/vue'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
+import { Avatar } from '@/components/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -186,7 +187,14 @@ const skeletonItems = [1, 2, 3, 4]
           <CardContent>
             <div class="flex items-start justify-between gap-4">
               <div class="flex items-start gap-4 min-w-0 flex-1">
+                <Avatar
+                  v-if="project.avatar_url"
+                  class="h-10 w-10 rounded-lg text-sm"
+                  :name="project.name"
+                  :src="project.avatar_url"
+                />
                 <div
+                  v-else
                   class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                 >
                   <FolderKanban class="h-5 w-5" />

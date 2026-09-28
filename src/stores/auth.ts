@@ -2,19 +2,13 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
+import { avatarExtension, validateAvatarFile, withCacheBust } from '@/lib/avatar'
 import { useProjectsStore } from './projects'
 
 interface Profile {
   id: string
   display_name: string
   avatar_url: string | null
-}
-
-const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const AVATAR_MAX_BYTES = 2 * 1024 * 1024
-
-function avatarExtension(type: string): string {
-  return type === 'image/jpeg' ? 'jpg' : type === 'image/png' ? 'png' : 'webp'
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -40,22 +34,13 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Загрузка аватарки в бакет avatars.
-   *
-   * Путь всегда {user_id}/avatar.{ext} с upsert: true — повторная загрузка
-   * перезаписывает файл, а не плодит новые. К публичному URL приклеиваем
-   * ?t=Date.now(), иначе браузер отдаст старую картинку из кэша по тому же
-   * адресу. Валидация типа/размера здесь — только UX: настоящую границу
-   * задаёт RLS-политика, не пускающая запись в чужую папку {user_id}/.
+   * Загрузка аватарки в бакет avatars: {user_id}/avatar.{ext} + upsert,
+   * публичный URL с cache-buster. Валидация — UX, граница — RLS.
+   * Подробности контракта — в README («Хранилище»).
    */
   async function uploadAvatar(file: File): Promise<string> {
     if (!user.value) throw new Error('Требуется вход в аккаунт')
-    if (!AVATAR_TYPES.includes(file.type)) {
-      throw new Error('Поддерживаются только JPG, PNG или WebP')
-    }
-    if (file.size > AVATAR_MAX_BYTES) {
-      throw new Error('Максимальный размер файла — 2 МБ')
-    }
+    validateAvatarFile(file)
 
     const path = `${user.value.id}/avatar.${avatarExtension(file.type)}`
 
@@ -68,7 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
     const {
       data: { publicUrl },
     } = supabase.storage.from('avatars').getPublicUrl(path)
-    const avatarUrl = `${publicUrl}?t=${Date.now()}`
+    const avatarUrl = withCacheBust(publicUrl)
 
     const { error: updateError } = await supabase
       .from('profiles')
