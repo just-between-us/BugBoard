@@ -268,6 +268,49 @@ export const useProjectsStore = defineStore('projects', () => {
     return newComment
   }
 
+  /**
+   * Редактирование комментария. Доступно только автору — политика
+   * comments_update_author_only в БД; updated_at выставляем явно,
+   * потому что триггера on update в схеме нет.
+   */
+  async function updateComment(id: string, content: string): Promise<BugComment> {
+    const { data, error: updateError } = await supabase
+      .from('bug_comments')
+      .update({ content, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateError) throw updateError
+    if (!data) throw new Error('Комментарий не обновлён')
+
+    const updatedComment = data as BugComment
+    const index = comments.value.findIndex((c) => c.id === id)
+    if (index !== -1) comments.value[index] = updatedComment
+    return updatedComment
+  }
+
+  /**
+   * Удаление комментария (soft delete): выставляем is_deleted, строка
+   * остаётся в БД, но исчезает из всех выборок. Если RLS запретит
+   * обновление (не автор), PostgREST вернёт 0 строк без ошибки —
+   * проверяем это явно.
+   */
+  async function deleteComment(id: string): Promise<void> {
+    const { data, error: deleteError } = await supabase
+      .from('bug_comments')
+      .update({ is_deleted: true, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id')
+
+    if (deleteError) throw deleteError
+    if (!data || data.length === 0) {
+      throw new Error('Комментарий не найден или нет прав на удаление')
+    }
+
+    comments.value = comments.value.filter((c) => c.id !== id)
+  }
+
   async function fetchProjectMembers(projectId: string): Promise<ProjectMember[]> {
     const { data, error: fetchError } = await supabase
       .from('project_members')
@@ -403,6 +446,8 @@ export const useProjectsStore = defineStore('projects', () => {
     fetchBugs,
     fetchComments,
     createComment,
+    updateComment,
+    deleteComment,
     fetchProjectMembers,
     fetchProfiles,
     createProject,

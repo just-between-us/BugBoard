@@ -5,7 +5,13 @@ import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 
 const router = useRouter()
 const route = useRoute()
@@ -52,8 +58,11 @@ async function confirmDelete() {
             >
               {{ projectsStore.currentProject.description }}
             </p>
-            <div class="mt-4 flex justify-between flex-wrap gap-2 text-xs text-muted-foreground">
-              <span class="font-mono">ID: {{ projectsStore.currentProject.id }}</span>
+            <div
+              class="mt-4 flex items-center justify-between flex-wrap gap-2 text-xs text-muted-foreground"
+            >
+              <span class="font-mono"> ID: {{ projectsStore.currentProject.id }} </span>
+              <span> ● </span>
               <span>Создан: {{ formatDate(projectsStore.currentProject.created_at) }}</span>
             </div>
             <span v-if="isOwner()" class="font-mono text-primary text-xs">Вы владелец</span>

@@ -23,11 +23,13 @@ const props = withDefaults(defineProps<Props>(), {
     :inset="props.inset"
     data-slot="dropdown-menu-item"
     :as="props.as"
-    :class="cn(
-      'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      props.inset && 'pl-8',
-      props.class
-    )"
+    :class="
+      cn(
+        'relative w-full flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        props.inset && 'pl-8',
+        props.class,
+      )
+    "
   >
     <slot />
   </RekaDropdownMenuItem>

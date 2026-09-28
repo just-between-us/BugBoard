@@ -8,11 +8,12 @@ import {
   SearchX,
   Lock,
   AlertTriangle,
-  Copy,
   Check,
   Loader2,
   MessageSquare,
   Send,
+  MoreHorizontal,
+  Trash2,
   ChevronsUpDown,
   Pencil,
   Undo2,
@@ -27,7 +28,7 @@ import {
   Pin,
   CheckCircle,
 } from '@lucide/vue'
-import { useProjectsStore, type Bug, type ProfileSummary } from '@/stores/projects'
+import { useProjectsStore, type Bug, type BugComment, type ProfileSummary } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { cn } from '@/lib/utils'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -39,8 +40,18 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { CopyButton } from '@/components/copy-button'
 
 type PageState = 'loading' | 'ready' | 'no-project' | 'no-bug' | 'no-access' | 'error'
 
@@ -61,6 +72,13 @@ const commentsError = ref<string | null>(null)
 const commentText = ref('')
 const commentSubmitting = ref(false)
 const commentError = ref<string | null>(null)
+const commentSaving = ref(false)
+const commentActionError = ref<string | null>(null)
+const editingCommentId = ref<string | null>(null)
+const commentDraft = ref('')
+const commentTextareaRef = ref<{ $el: HTMLTextAreaElement } | null>(null)
+const deleteTarget = ref<BugComment | null>(null)
+const deleteSaving = ref(false)
 
 const attrSaving = ref(false)
 const attrError = ref<string | null>(null)
@@ -200,29 +218,6 @@ function toUserError(e: unknown): string {
   return message || 'Произошла ошибка. Попробуйте ещё раз.'
 }
 
-const copyFeedback = ref(false)
-let copyTimer: ReturnType<typeof setTimeout> | undefined
-
-async function copyBugId() {
-  if (!bug.value) return
-  const text = bug.value.id
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    document.body.appendChild(textarea)
-    textarea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textarea)
-  }
-  copyFeedback.value = true
-  if (copyTimer) clearTimeout(copyTimer)
-  copyTimer = setTimeout(() => {
-    copyFeedback.value = false
-  }, 1500)
-}
-
 async function loadProfiles() {
   const ids = [bug.value?.created_by, ...projectsStore.comments.map((c) => c.author_id)].filter(
     (id): id is string => !!id,
@@ -265,6 +260,10 @@ async function load() {
   commentText.value = ''
   commentError.value = null
   commentsError.value = null
+  commentActionError.value = null
+  editingCommentId.value = null
+  commentDraft.value = ''
+  deleteTarget.value = null
   attrError.value = null
   errorContext.value = null
   original.value = null
@@ -457,6 +456,82 @@ async function submitComment() {
   }
 }
 
+function isCommentAuthor(comment: BugComment): boolean {
+  return !!authStore.user && comment.author_id === authStore.user.id
+}
+
+function isEditedComment(comment: BugComment): boolean {
+  return comment.updated_at !== comment.created_at
+}
+
+function startEditComment(comment: BugComment) {
+  if (commentSaving.value) return
+  commentActionError.value = null
+  commentDraft.value = comment.content
+  editingCommentId.value = comment.id
+  void nextTick(() => commentTextareaRef.value?.$el.focus())
+}
+
+function cancelEditComment() {
+  if (commentSaving.value) return
+  editingCommentId.value = null
+  commentDraft.value = ''
+  commentActionError.value = null
+}
+
+async function confirmEditComment() {
+  const id = editingCommentId.value
+  const comment = comments.value.find((c) => c.id === id)
+  if (!id || !comment) return
+
+  const content = commentDraft.value.trim()
+  if (!content || content === comment.content) {
+    cancelEditComment()
+    return
+  }
+
+  commentSaving.value = true
+  commentActionError.value = null
+  try {
+    await projectsStore.updateComment(id, content)
+    editingCommentId.value = null
+    commentDraft.value = ''
+  } catch (e) {
+    commentActionError.value = toUserError(e)
+  } finally {
+    commentSaving.value = false
+  }
+}
+
+function askDeleteComment(comment: BugComment) {
+  commentActionError.value = null
+  deleteTarget.value = comment
+}
+
+function closeDeleteDialog() {
+  deleteTarget.value = null
+  commentActionError.value = null
+}
+
+async function confirmDeleteComment() {
+  if (!deleteTarget.value || deleteSaving.value) return
+
+  deleteSaving.value = true
+  commentActionError.value = null
+  try {
+    await projectsStore.deleteComment(deleteTarget.value.id)
+    closeDeleteDialog()
+  } catch (e) {
+    commentActionError.value = toUserError(e)
+  } finally {
+    deleteSaving.value = false
+  }
+}
+
+function onCommentDialogOpen(open: boolean) {
+  if (!open) closeDeleteDialog()
+}
+
 const backLabel = computed(() => {
   return state.value === 'no-project' || state.value === 'no-access'
     ? 'К проектам'
@@ -481,7 +556,6 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  if (copyTimer) clearTimeout(copyTimer)
   if (savedTimer) clearTimeout(savedTimer)
   projectsStore.clearCurrentBug()
 })
@@ -737,23 +811,7 @@ onBeforeUnmount(() => {
               class="mt-3 inline-flex items-center gap-1 font-mono text-xs text-muted-foreground"
             >
               {{ bug.id }}
-              <span class="relative inline-flex">
-                <button
-                  class="inline-flex items-center justify-center rounded p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-                  title="Копировать ID"
-                  @click="copyBugId"
-                >
-                  <Copy class="h-3 w-3" />
-                </button>
-                <Transition name="copy-feedback">
-                  <span
-                    v-if="copyFeedback"
-                    class="absolute bottom-full left-1/2 z-10 mb-1.5 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded bg-green-600 px-2 py-0.5 text-xs text-white shadow-sm"
-                  >
-                    Скопировано <Check class="h-3 w-3" />
-                  </span>
-                </Transition>
-              </span>
+              <CopyButton :text="bug.id" label="Копировать ID" />
             </span>
           </div>
         </div>
@@ -905,8 +963,86 @@ onBeforeUnmount(() => {
                       <span class="text-xs text-muted-foreground">
                         {{ formatDate(comment.created_at) }}
                       </span>
+                      <span v-if="isEditedComment(comment)" class="text-xs text-muted-foreground">
+                        (изменён)
+                      </span>
+
+                      <DropdownMenu v-if="isCommentAuthor(comment)">
+                        <DropdownMenuTrigger
+                          :class="
+                            cn(
+                              buttonVariants({ variant: 'ghost' }),
+                              'ml-auto h-6 w-6 self-center rounded-md p-1 text-muted-foreground hover:text-foreground',
+                            )
+                          "
+                          title="Действия с комментарием"
+                          aria-label="Действия с комментарием"
+                        >
+                          <MoreHorizontal class="h-3.5 w-3.5" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" class="w-44">
+                          <DropdownMenuItem
+                            :disabled="commentSaving"
+                            @click="startEditComment(comment)"
+                          >
+                            <Pencil class="mr-2 h-4 w-4" />
+                            Редактировать
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            class="text-severity-critical"
+                            :disabled="deleteSaving"
+                            @click="askDeleteComment(comment)"
+                          >
+                            <Trash2 class="mr-2 h-4 w-4" />
+                            Удалить
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <p class="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
+
+                    <template v-if="editingCommentId === comment.id">
+                      <Textarea
+                        ref="commentTextareaRef"
+                        v-model="commentDraft"
+                        :rows="3"
+                        class="mt-2"
+                        maxlength="2000"
+                        :disabled="commentSaving"
+                        aria-label="Текст комментария"
+                        @keydown.ctrl.enter.prevent="confirmEditComment"
+                        @keydown.esc="cancelEditComment"
+                      />
+                      <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                        <Button
+                          size="sm"
+                          class="h-8"
+                          :disabled="commentSaving || !commentDraft.trim()"
+                          @click="confirmEditComment"
+                        >
+                          <Loader2 v-if="commentSaving" class="h-4 w-4 animate-spin" />
+                          <Check v-else class="h-4 w-4" />
+                          {{ commentSaving ? 'Сохраняем…' : 'Сохранить' }}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          class="h-8"
+                          :disabled="commentSaving"
+                          @click="cancelEditComment"
+                        >
+                          Отмена
+                        </Button>
+                        <span class="ml-auto text-xs text-muted-foreground">
+                          {{ commentDraft.length }}/2000
+                        </span>
+                      </div>
+                      <p v-if="commentActionError" class="mt-1 text-xs text-severity-critical">
+                        {{ commentActionError }}
+                      </p>
+                    </template>
+
+                    <p v-else class="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
                       {{ comment.content }}
                     </p>
                   </div>
@@ -986,7 +1122,7 @@ onBeforeUnmount(() => {
                       </span>
                       <ChevronsUpDown class="h-3.5 w-3.5 shrink-0 opacity-50" />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" class="w-56">
+                    <DropdownMenuContent align="start" class="w-full">
                       <DropdownMenuItem
                         v-for="opt in statusOptions"
                         :key="opt.value"
@@ -1145,30 +1281,44 @@ onBeforeUnmount(() => {
           </Card>
         </div>
       </div>
+
+      <!-- Delete comment confirmation -->
+      <Dialog :open="!!deleteTarget" @update:open="onCommentDialogOpen">
+        <DialogContent class="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Удалить комментарий?</DialogTitle>
+            <DialogDescription>
+              Комментарий будет скрыт у всех участников. Отменить это действие нельзя.
+            </DialogDescription>
+          </DialogHeader>
+
+          <p
+            v-if="deleteTarget"
+            class="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-sm"
+          >
+            {{ deleteTarget.content }}
+          </p>
+
+          <p v-if="commentActionError" class="text-xs text-severity-critical">
+            {{ commentActionError }}
+          </p>
+
+          <DialogFooter>
+            <Button variant="ghost" :disabled="deleteSaving" @click="onCommentDialogOpen(false)">
+              Отмена
+            </Button>
+            <Button variant="destructive" :disabled="deleteSaving" @click="confirmDeleteComment">
+              <Loader2 v-if="deleteSaving" class="h-4 w-4 animate-spin" />
+              {{ deleteSaving ? 'Удаляем…' : 'Удалить' }}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </template>
   </div>
 </template>
 
 <style scoped>
-.copy-feedback-enter-active {
-  transition:
-    opacity 0.15s ease-out,
-    transform 0.15s ease-out;
-}
-.copy-feedback-leave-active {
-  transition:
-    opacity 0.1s ease-in,
-    transform 0.1s ease-in;
-}
-.copy-feedback-enter-from {
-  opacity: 0;
-  transform: translateY(4px);
-}
-.copy-feedback-leave-to {
-  opacity: 0;
-  transform: translateY(-2px);
-}
-
 @keyframes eye-look {
   0%,
   100% {

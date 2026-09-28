@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Database,
@@ -11,8 +10,6 @@ import {
   Edit,
   Trash2,
   MoreHorizontal,
-  Copy,
-  Check,
   CheckCircle,
   Eye,
   Loader2,
@@ -23,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import { CopyButton } from '@/components/copy-button'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -39,8 +37,6 @@ const props = defineProps<Props>()
 
 const router = useRouter()
 
-const copyFeedbackId = ref<string | null>(null)
-
 function bugRoute() {
   return {
     name: 'bug-detail' as const,
@@ -52,25 +48,6 @@ function goToBug(event: MouseEvent) {
   const target = event.target as HTMLElement | null
   if (target?.closest('button, a, input, textarea, [role="menuitem"]')) return
   router.push(bugRoute())
-}
-
-async function copyToClipboard(text: string) {
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    document.body.appendChild(textarea)
-    textarea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textarea)
-  }
-  copyFeedbackId.value = text
-  setTimeout(() => {
-    if (copyFeedbackId.value === text) {
-      copyFeedbackId.value = null
-    }
-  }, 1500)
 }
 
 function getSeverityDot(severity: string) {
@@ -212,23 +189,7 @@ function isNewBug(createdAt: string) {
             <div class="flex items-center gap-2 flex-wrap">
               <span class="font-mono inline-flex items-center gap-1">
                 {{ props.bug.id }}
-                <span class="relative inline-flex">
-                  <button
-                    class="inline-flex items-center justify-center rounded p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-                    @click="copyToClipboard(props.bug.id)"
-                    title="Копировать ID"
-                  >
-                    <Copy class="h-3 w-3" />
-                  </button>
-                  <Transition name="copy-feedback">
-                    <span
-                      v-if="copyFeedbackId === props.bug.id"
-                      class="absolute flex items-center gap-1 bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-10 whitespace-nowrap rounded bg-green-600 px-2 py-0.5 text-xs text-white shadow-sm"
-                    >
-                      Скопировано <Check class="w-4" />
-                    </span>
-                  </Transition>
-                </span>
+                <CopyButton :text="props.bug.id" label="Копировать ID" />
               </span>
             </div>
             <div class="flex justify-between">
@@ -276,25 +237,6 @@ function isNewBug(createdAt: string) {
 </template>
 
 <style scoped>
-.copy-feedback-enter-active {
-  transition:
-    opacity 0.15s ease-out,
-    transform 0.15s ease-out;
-}
-.copy-feedback-leave-active {
-  transition:
-    opacity 0.1s ease-in,
-    transform 0.1s ease-in;
-}
-.copy-feedback-enter-from {
-  opacity: 0;
-  transform: translateY(4px);
-}
-.copy-feedback-leave-to {
-  opacity: 0;
-  transform: translateY(-2px);
-}
-
 @keyframes eye-look {
   0%,
   100% {

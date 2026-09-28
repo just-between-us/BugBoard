@@ -274,7 +274,8 @@ $$;
 
 - `comments_select_team_only` — читать участники проекта
 - `comments_insert_team_only` — писать участники (author_id = auth.uid())
-- `comments_update_team_only` — обновлять участники
+- `comments_update_author_only` — редактировать и удалять (soft delete) только автор
+- `comments_delete_author_only` — физическое удаление только автором (фронт использует soft delete)
 
 **reports**
 
