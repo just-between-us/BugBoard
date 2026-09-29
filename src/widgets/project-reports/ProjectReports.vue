@@ -6,6 +6,7 @@ import {
   Bug as BugIcon,
   Check,
   ChevronsUpDown,
+  Eye,
   Inbox,
   Loader2,
   MessageSquare,
@@ -508,11 +509,15 @@ onBeforeUnmount(() => {
                   class="h-8 w-8 text-xs"
                   :name="reporterName(report.reporter_id)"
                   :src="reporterAvatar(report.reporter_id)"
+                  :to="{ name: 'user-profile', params: { userId: report.reporter_id } }"
                 />
                 <div class="min-w-0">
-                  <p class="truncate text-sm font-medium">
+                  <RouterLink
+                    :to="{ name: 'user-profile', params: { userId: report.reporter_id } }"
+                    class="block truncate text-sm font-medium hover:underline underline-offset-4"
+                  >
                     {{ reporterName(report.reporter_id) }}
-                  </p>
+                  </RouterLink>
                   <p class="text-xs text-muted-foreground">{{ formatDate(report.created_at) }}</p>
                   <span class="mt-0.5 flex items-center gap-0.5">
                     <span class="truncate font-mono text-xs text-muted-foreground">
@@ -593,23 +598,31 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
               <RouterLink
                 :to="{ name: 'report-view', params: { reportId: report.id } }"
-                class="min-w-0 font-medium hover:underline underline-offset-4"
+                class="pt-3 pb-1 w-full font-medium hover:underline underline-offset-4"
               >
-                {{ report.title }}
+                <div class="w-full font-medium hover:underline underline-offset-4">
+                  {{ report.title }}
+                </div>
+                <div
+                  class="mt-1 w-full block text-sm whitespace-pre-line text-muted-foreground hover:underline underline-offset-4"
+                >
+                  {{ report.description }}
+                </div>
               </RouterLink>
-              <button
-                v-if="report.bug_id && bugTitleFor(report)"
-                type="button"
-                class="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground focus-visible:border-ring focus-visible:outline-none"
-                title="Открыть баг"
-                @click.stop="openBug(report)"
-              >
-                <BugIcon class="h-3 w-3 shrink-0" />
-                <span class="truncate">{{ bugTitleFor(report) }}</span>
-              </button>
+              <div v-if="report.bug_id && bugTitleFor(report)" class="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  class="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground focus-visible:border-ring focus-visible:outline-none"
+                  title="Открыть баг"
+                  @click.stop="openBug(report)"
+                >
+                  <BugIcon class="h-3 w-3 shrink-0" />
+                  <span class="truncate"> Привязан к: {{ bugTitleFor(report) }}</span>
+                </button>
+              </div>
               <span
                 v-else-if="report.bug_id"
                 class="inline-flex items-center gap-1 rounded-md border border-dashed bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground"
@@ -619,12 +632,6 @@ onBeforeUnmount(() => {
                 Баг удалён
               </span>
             </div>
-            <RouterLink
-              :to="{ name: 'report-view', params: { reportId: report.id } }"
-              class="mt-1 block text-sm whitespace-pre-line text-muted-foreground hover:underline underline-offset-4"
-            >
-              {{ report.description }}
-            </RouterLink>
 
             <!-- Reply -->
             <div
@@ -702,24 +709,38 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Bottom actions -->
-            <div class="mt-3 flex items-center gap-2" @click.stop>
-              <Button
-                v-if="replyTargetId !== report.id && !report.reply"
-                variant="outline"
-                size="sm"
-                class="h-8 gap-1.5"
-                :disabled="savingId === report.id"
-                @click="openReply(report)"
-              >
-                <Reply class="h-3.5 w-3.5" />
-                Ответить репортёру
-              </Button>
+            <div class="mt-3 flex justify-between items-center gap-2" @click.stop>
+              <div class="flex items-center gap-2">
+                <Button
+                  v-if="replyTargetId !== report.id && !report.reply"
+                  variant="outline"
+                  size="sm"
+                  class="h-8 gap-1.5"
+                  :disabled="savingId === report.id"
+                  @click="openReply(report)"
+                >
+                  <Reply class="h-3.5 w-3.5" />
+                  Ответить репортёру
+                </Button>
+                <RouterLink
+                  :to="{ name: 'report-view', params: { reportId: report.id } }"
+                  :class="
+                    cn(
+                      buttonVariants({ variant: 'ghost' }),
+                      'h-8 gap-1.5 text-muted-foreground hover:text-foreground',
+                    )
+                  "
+                >
+                  <Eye class="h-3.5 w-3.5" />
+                  Детали
+                </RouterLink>
+              </div>
               <Button
                 v-if="!(report.id in pendingDeletes) && !finalizingDeletes[report.id]"
                 type="button"
                 size="sm"
                 variant="destructive"
-                class="ml-auto h-8 gap-1.5"
+                class="h-8 gap-1.5"
                 :disabled="savingId === report.id"
                 @click="startSoftDelete(report)"
               >
@@ -740,7 +761,7 @@ onBeforeUnmount(() => {
         <!-- Actions above the overlay -->
         <div
           v-if="report.id in pendingDeletes || finalizingDeletes[report.id]"
-          class="pointer-events-none absolute inset-0 z-20 flex items-end justify-end p-4"
+          class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
         >
           <Button
             v-if="report.id in pendingDeletes"
