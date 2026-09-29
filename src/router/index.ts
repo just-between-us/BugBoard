@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LandingView from '@/views/LandingView.vue'
 import AuthView from '@/views/AuthView.vue'
+import ReportView from '@/views/ReportView.vue'
+import ReportDetailView from '@/views/ReportDetailView.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import ProjectsView from '@/views/ProjectsView.vue'
 import ProjectView from '@/views/ProjectView.vue'
@@ -21,6 +23,16 @@ const router = createRouter({
       path: '/auth',
       name: 'auth',
       component: AuthView,
+    },
+    {
+      path: '/report/:projectId',
+      name: 'report',
+      component: ReportView,
+    },
+    {
+      path: '/reports/:reportId',
+      name: 'report-view',
+      component: ReportDetailView,
     },
     {
       path: '/app',

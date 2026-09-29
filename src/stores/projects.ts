@@ -62,6 +62,29 @@ export interface ProjectMember {
   created_at: string
 }
 
+export interface Report {
+  id: string
+  project_id: string
+  bug_id: string | null
+  reporter_id: string
+  title: string
+  description: string
+  status: 'new' | 'confirmed' | 'rejected'
+  flag: 'none' | 'spam' | 'duplicate'
+  reply: string | null
+  reply_author_id: string | null
+  replied_at: string | null
+  is_deleted: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface CreateReportInput {
+  project_id: string
+  title: string
+  description: string
+}
+
 interface CreateProjectInput {
   name: string
   description?: string
@@ -149,6 +172,18 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  async function fetchProjectBugs(projectId: string): Promise<Bug[]> {
+    const { data, error: fetchError } = await supabase
+      .from('bugs')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+
+    if (fetchError) throw fetchError
+    return (data ?? []) as Bug[]
+  }
+
   async function fetchBug(bugId: string) {
     loading.value = true
     error.value = null
@@ -170,11 +205,6 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
-  /**
-   * Загрузка проекта для страницы бага с учётом RLS:
-   * возвращает null, если проект скрыт политиками (не существует, удалён
-   * или текущий пользователь не имеет к нему доступа).
-   */
   async function fetchProjectIfVisible(projectId: string): Promise<Project | null> {
     const { data, error: fetchError } = await supabase
       .from('projects')
@@ -188,11 +218,6 @@ export const useProjectsStore = defineStore('projects', () => {
     return data
   }
 
-  /**
-   * Загрузка бага в рамках конкретного проекта с учётом RLS:
-   * политика bugs_select_team_only отфильтрует строку, если пользователь
-   * не участник проекта, поэтому используем maybeSingle вместо single.
-   */
   async function fetchBugInProject(projectId: string, bugId: string): Promise<Bug | null> {
     const { data, error: fetchError } = await supabase
       .from('bugs')
@@ -205,6 +230,41 @@ export const useProjectsStore = defineStore('projects', () => {
     if (fetchError) throw fetchError
     currentBug.value = data
     return data
+  }
+
+  async function fetchPublicProject(projectId: string): Promise<Project | null> {
+    const { data, error: fetchError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .eq('is_deleted', false)
+      .maybeSingle()
+
+    if (fetchError) throw fetchError
+    return data
+  }
+
+  async function createReport(input: CreateReportInput): Promise<Report> {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) throw new Error('Требуется подтверждение почты')
+
+    const { data, error: insertError } = await supabase
+      .from('reports')
+      .insert({
+        project_id: input.project_id,
+        title: input.title,
+        description: input.description,
+        reporter_id: user.id,
+      })
+      .select()
+      .single()
+
+    if (insertError) throw insertError
+    if (!data) throw new Error('Репорт не создан')
+
+    return data as Report
   }
 
   async function isProjectMember(projectId: string): Promise<boolean> {
@@ -278,11 +338,6 @@ export const useProjectsStore = defineStore('projects', () => {
     return newComment
   }
 
-  /**
-   * Редактирование комментария. Доступно только автору — политика
-   * comments_update_author_only в БД; updated_at выставляем явно,
-   * потому что триггера on update в схеме нет.
-   */
   async function updateComment(id: string, content: string): Promise<BugComment> {
     const { data, error: updateError } = await supabase
       .from('bug_comments')
@@ -300,12 +355,6 @@ export const useProjectsStore = defineStore('projects', () => {
     return updatedComment
   }
 
-  /**
-   * Удаление комментария (soft delete): выставляем is_deleted, строка
-   * остаётся в БД, но исчезает из всех выборок. Если RLS запретит
-   * обновление (не автор), PostgREST вернёт 0 строк без ошибки —
-   * проверяем это явно.
-   */
   async function deleteComment(id: string): Promise<void> {
     const { data, error: deleteError } = await supabase
       .from('bug_comments')
@@ -321,6 +370,56 @@ export const useProjectsStore = defineStore('projects', () => {
     comments.value = comments.value.filter((c) => c.id !== id)
   }
 
+  async function fetchReport(reportId: string): Promise<Report | null> {
+    const { data, error: fetchError } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('id', reportId)
+      .eq('is_deleted', false)
+      .maybeSingle()
+
+    if (fetchError) throw fetchError
+    return data
+  }
+
+  async function fetchReports(projectId: string): Promise<Report[]> {
+    const { data, error: fetchError } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+
+    if (fetchError) throw fetchError
+    return (data ?? []) as Report[]
+  }
+
+  async function fetchReportsByBug(bugId: string): Promise<Report[]> {
+    const { data, error: fetchError } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('bug_id', bugId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+
+    if (fetchError) throw fetchError
+    return (data ?? []) as Report[]
+  }
+
+  async function updateReport(id: string, updates: Partial<Report>): Promise<Report> {
+    const { data, error: updateError } = await supabase
+      .from('reports')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateError) throw updateError
+    if (!data) throw new Error('Репорт не обновлён')
+
+    return data as Report
+  }
+
   async function fetchProjectMembers(projectId: string): Promise<ProjectMember[]> {
     const { data, error: fetchError } = await supabase
       .from('project_members')
@@ -332,10 +431,6 @@ export const useProjectsStore = defineStore('projects', () => {
     return (data ?? []) as ProjectMember[]
   }
 
-  /**
-   * Все профили — для выпадающего списка «Добавить участника».
-   * Политика profiles_select_all_authenticated разрешает читать всем вошедшим.
-   */
   async function fetchAllProfiles(): Promise<ProfileSummary[]> {
     const { data, error: fetchError } = await supabase
       .from('profiles')
@@ -346,11 +441,6 @@ export const useProjectsStore = defineStore('projects', () => {
     return (data ?? []) as ProfileSummary[]
   }
 
-  /**
-   * Добавление участника. Политика members_insert_owner_only пропустит
-   * только владельца проекта (RLS вернёт 42501), дубль отсекает unique
-   * (project_id, user_id) — 23505.
-   */
   async function addProjectMember(projectId: string, userId: string): Promise<void> {
     const { error: insertError } = await supabase
       .from('project_members')
@@ -362,10 +452,6 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
-  /**
-   * Удаление участника. Политика members_delete_owner_only: PostgREST при
-   * запрете вернёт 0 строк без ошибки — проверяем явно (как в deleteComment).
-   */
   async function removeProjectMember(memberId: string): Promise<void> {
     const { data, error: deleteError } = await supabase
       .from('project_members')
@@ -422,11 +508,6 @@ export const useProjectsStore = defineStore('projects', () => {
     profiles.value = {}
   }
 
-  /**
-   * Профиль пользователя для страницы просмотра. Политика
-   * profiles_select_all_authenticated разрешает читать профили всем
-   * вошедшим, поэтому возвращает null только если пользователя не существует.
-   */
   async function fetchProfileById(id: string): Promise<PublicProfile | null> {
     const { data, error: fetchError } = await supabase
       .from('profiles')
@@ -441,11 +522,6 @@ export const useProjectsStore = defineStore('projects', () => {
     return (data as PublicProfile | null) ?? null
   }
 
-  /**
-   * Баги, созданные пользователем. RLS bugs_select_team_only оставит только
-   * те, что видит текущий зритель; имя проекта подтягивается встроенной
-   * выборкой — проект виден, если виден сам баг.
-   */
   async function fetchBugsByAuthor(authorId: string): Promise<BugWithProject[]> {
     const { data, error: fetchError } = await supabase
       .from('bugs')
@@ -485,12 +561,6 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
-  /**
-   * Загрузка аватарки проекта в бакет project-avatars: {project_id}/avatar.{ext}
-   * + upsert, публичный URL с cache-buster. Право есть у любого участника
-   * команды (is_project_member), а не только владельца — в отличие от
-   * пользовательского аватара, где папка {user_id} и auth.uid().
-   */
   async function uploadProjectAvatar(projectId: string, file: File): Promise<string> {
     validateAvatarFile(file)
 
@@ -595,20 +665,28 @@ export const useProjectsStore = defineStore('projects', () => {
     currentBug,
     comments,
     commentsLoading,
+    profiles,
     loading,
     error,
     hasProjects,
     fetchProjects,
     fetchProject,
     fetchProjectIfVisible,
+    fetchPublicProject,
+    createReport,
     fetchBug,
     fetchBugInProject,
+    fetchProjectBugs,
     isProjectMember,
     fetchBugs,
     fetchComments,
     createComment,
     updateComment,
     deleteComment,
+    fetchReport,
+    fetchReports,
+    fetchReportsByBug,
+    updateReport,
     fetchProjectMembers,
     fetchAllProfiles,
     addProjectMember,

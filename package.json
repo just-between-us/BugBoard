@@ -13,8 +13,7 @@
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
-    "deploy": "vite build && shx cp dist/index.html dist/404.html && gh-pages -d dist --dotfiles",
-    "deploy:direct": "npm run build && shx cp dist/index.html dist/404.html && npx gh-pages -d dist --nojekyll"
+    "deploy": "npm run build && node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\" && gh-pages -d dist --dotfiles --nojekyll -m \"deploy\""
   },
   "dependencies": {
     "@lucide/vue": "^1.48.0",

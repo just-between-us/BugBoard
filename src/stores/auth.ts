@@ -33,11 +33,6 @@ export const useAuthStore = defineStore('auth', () => {
     if (!error) profile.value = data
   }
 
-  /**
-   * Загрузка аватарки в бакет avatars: {user_id}/avatar.{ext} + upsert,
-   * публичный URL с cache-buster. Валидация — UX, граница — RLS.
-   * Подробности контракта — в README («Хранилище»).
-   */
   async function uploadAvatar(file: File): Promise<string> {
     if (!user.value) throw new Error('Требуется вход в аккаунт')
     validateAvatarFile(file)
@@ -108,6 +103,18 @@ export const useAuthStore = defineStore('auth', () => {
     await projectsStore.fetchProjects()
   }
 
+  async function sendOtp(email: string) {
+    const { error } = await supabase.auth.signInWithOtp({ email })
+    if (error) throw error
+  }
+
+  async function verifyEmailOtp(email: string, token: string) {
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+    if (error) throw error
+    session.value = data.session
+    await fetchProfile()
+  }
+
   async function signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
@@ -138,6 +145,8 @@ export const useAuthStore = defineStore('auth', () => {
     uploadAvatar,
     signUp,
     verifySignup,
+    sendOtp,
+    verifyEmailOtp,
     signIn,
     signOut,
   }

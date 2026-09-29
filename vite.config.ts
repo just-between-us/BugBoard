@@ -5,7 +5,8 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/BugBoard/' : '/',
   plugins: [vue(), vueDevTools(), tailwindcss()],
   resolve: {
     alias: {
@@ -16,4 +17,4 @@ export default defineConfig({
     host: true,
     port: 5173,
   },
-})
+}))

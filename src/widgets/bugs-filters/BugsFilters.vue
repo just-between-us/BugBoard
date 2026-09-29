@@ -2,7 +2,13 @@
 import { Search, X, ArrowUpDown, Plus } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 
 interface Props {
@@ -157,7 +163,11 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
             </Button>
           </div>
           <div v-else>
-            <Select :value="props.statusFilter" @update:modelValue="handleStatusFilterUpdate" class="w-36">
+            <Select
+              :model-value="props.statusFilter"
+              @update:modelValue="handleStatusFilterUpdate"
+              class="w-36"
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Статус" />
               </SelectTrigger>
@@ -186,7 +196,11 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
             </Button>
           </div>
           <div v-else>
-            <Select :value="props.severityFilter" @update:modelValue="handleSeverityFilterUpdate" class="w-36">
+            <Select
+              :model-value="props.severityFilter"
+              @update:modelValue="handleSeverityFilterUpdate"
+              class="w-36"
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Важность" />
               </SelectTrigger>
@@ -215,7 +229,11 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
             </Button>
           </div>
           <div v-else>
-            <Select :value="props.areaFilter" @update:modelValue="handleAreaFilterUpdate" class="w-40">
+            <Select
+              :model-value="props.areaFilter"
+              @update:modelValue="handleAreaFilterUpdate"
+              class="w-40"
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Область" />
               </SelectTrigger>
@@ -228,7 +246,7 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
             </Select>
           </div>
           <div class="flex items-center gap-1">
-            <Select :value="props.sortBy" @update:modelValue="handleSortByUpdate">
+            <Select :model-value="props.sortBy" @update:modelValue="handleSortByUpdate">
               <SelectTrigger>
                 <SelectValue placeholder="Сортировка" />
               </SelectTrigger>

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Globe, Lock, Settings, Trash2, MoreHorizontal, Camera, Loader2 } from '@lucide/vue'
-import { ref, onMounted } from 'vue'
+import { Globe, Lock, Settings, Trash2, MoreHorizontal, Camera, Loader2, Send } from '@lucide/vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/avatar'
+import { CopyButton } from '@/components/copy-button'
 import { toUserError } from '@/lib/format'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import {
@@ -21,6 +22,13 @@ const route = useRoute()
 const projectsStore = useProjectsStore()
 const authStore = useAuthStore()
 
+const reportUrl = computed(() => {
+  const projectId = projectsStore.currentProject?.id
+  if (!projectId) return ''
+  const { href } = router.resolve({ name: 'report', params: { projectId } })
+  return new URL(href, window.location.origin).href
+})
+
 function formatDate(dateString: string) {
   return new Date(dateString).toLocaleDateString('ru-RU', {
     day: 'numeric',
@@ -35,7 +43,6 @@ function isOwner() {
   return projectsStore.currentProject?.owner_id === authStore.user?.id
 }
 
-/** Аватар проекта может менять любой участник (RLS is_project_member), не только владелец. */
 const canEditAvatar = ref(false)
 const avatarInput = ref<HTMLInputElement | null>(null)
 const uploadingAvatar = ref(false)
@@ -152,6 +159,21 @@ async function confirmDelete() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+
+        <div v-if="projectsStore.currentProject.is_public" class="flex items-center gap-1">
+          <Button variant="outline" size="sm" class="gap-1" as-child>
+            <a :href="reportUrl" target="_blank" rel="noopener">
+              <Send class="h-3.5 w-3.5" />
+              Ссылка для репортёров
+            </a>
+          </Button>
+          <CopyButton
+            :text="reportUrl"
+            label="Копировать ссылку для репортёров"
+            feedback="Ссылка скопирована"
+            icon-class="h-3.5 w-3.5 ml-2"
+          />
+        </div>
 
         <TooltipProvider>
           <Tooltip>

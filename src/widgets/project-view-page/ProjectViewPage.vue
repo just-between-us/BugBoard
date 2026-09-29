@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, watch, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, AlertTriangle, Settings } from '@lucide/vue'
+import { ChevronLeft, Settings } from '@lucide/vue'
 import { useProjectsStore } from '@/stores/projects'
 import { Button } from '@/components/ui/button'
 import ProjectHeader from '@/widgets/project-header/ProjectHeader.vue'
@@ -9,6 +9,7 @@ import ProjectTabs from '@/widgets/project-tabs/ProjectTabs.vue'
 import BugsFilters from '@/widgets/bugs-filters/BugsFilters.vue'
 import BugList from '@/widgets/bug-list/BugList.vue'
 import ProjectMembers from '@/widgets/project-members/ProjectMembers.vue'
+import ProjectReports from '@/widgets/project-reports/ProjectReports.vue'
 import CreateBugDialog from '@/widgets/create-bug-dialog/CreateBugDialog.vue'
 
 const route = useRoute()
@@ -79,9 +80,11 @@ const filteredBugs = computed(() => {
 })
 
 async function loadProject() {
+  const id = projectId.value
+  if (!id) return
   try {
-    await projectsStore.fetchProject(projectId.value)
-    await projectsStore.fetchBugs(projectId.value)
+    await projectsStore.fetchProject(id)
+    await projectsStore.fetchBugs(id)
   } catch {
     router.push({ name: 'projects' })
   }
@@ -167,13 +170,10 @@ watch(
     <!-- Main Content (when project loaded) -->
     <div v-else-if="projectsStore.currentProject">
       <!-- Tabs Navigation -->
-      <ProjectTabs :activeTab="activeTab" @updateTab="activeTab = $event" />
+      <ProjectTabs class="mb-3" :activeTab="activeTab" @updateTab="activeTab = $event" />
 
       <!-- Sticky Header: Bugs Filters (only for bugs tab) -->
-      <div
-        v-if="activeTab === 'bugs'"
-        class="sticky top-0 z-20 -mx-6 px-6 bg-background/90 backdrop-blur-sm"
-      >
+      <div v-if="activeTab === 'bugs'" class="sticky top-0 z-20 bg-background/90 backdrop-blur-sm">
         <BugsFilters
           :searchQuery="searchQuery"
           :statusFilter="statusFilter"
@@ -211,13 +211,7 @@ watch(
       <!-- Members -->
       <ProjectMembers v-else-if="activeTab === 'members'" :project-id="projectId" />
 
-      <div v-else-if="activeTab === 'reports'" class="text-center py-12">
-        <AlertTriangle class="mx-auto h-12 w-12 text-muted-foreground/50" />
-        <h3 class="mt-4 text-lg font-medium">Репорты</h3>
-        <p class="mt-1 text-sm text-muted-foreground">
-          Здесь будут отображаться репорты от пользователей
-        </p>
-      </div>
+      <ProjectReports v-else-if="activeTab === 'reports'" :project-id="projectId" />
 
       <div v-else-if="activeTab === 'settings'" class="text-center py-12">
         <Settings class="mx-auto h-12 w-12 text-muted-foreground/50" />

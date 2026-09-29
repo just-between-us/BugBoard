@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import BugDetailHeader from '@/widgets/bug-detail-header/BugDetailHeader.vue'
 import BugDetailDescription from '@/widgets/bug-detail-description/BugDetailDescription.vue'
 import BugDetailComments from '@/widgets/bug-detail-comments/BugDetailComments.vue'
+import BugDetailReports from '@/widgets/bug-detail-reports/BugDetailReports.vue'
 import BugDetailSidebar from '@/widgets/bug-detail-sidebar/BugDetailSidebar.vue'
 import BugDetailSkeleton from '@/widgets/bug-detail-skeleton/BugDetailSkeleton.vue'
 
@@ -267,6 +268,8 @@ onBeforeUnmount(() => {
           />
 
           <BugDetailComments :bug="bug" />
+
+          <BugDetailReports :bug="bug" />
         </div>
 
         <!-- Sidebar -->
