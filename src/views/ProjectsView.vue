@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Plus, FolderKanban, Globe, Lock, Loader2 } from '@lucide/vue'
+import { computed, onMounted, ref } from 'vue'
+import { Plus, FolderKanban, Globe, Loader2 } from '@lucide/vue'
+import type { Project } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
-import { Avatar } from '@/components/avatar'
+import ProjectCard from '@/entities/project-card/ProjectCard.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import {
   Dialog,
@@ -32,6 +33,20 @@ const form = ref({
   description: '',
   is_public: false,
 })
+
+const myProjectIds = ref<Set<string> | null>(null)
+
+function isMine(project: Project): boolean {
+  if (!project.is_public) return true
+  if (project.owner_id === authStore.user?.id) return true
+  if (myProjectIds.value) return myProjectIds.value.has(project.id)
+  return false
+}
+
+const myProjects = computed(() => projectsStore.projects.filter(isMine))
+const publicProjects = computed(() =>
+  projectsStore.projects.filter((project) => project.is_public && !isMine(project)),
+)
 
 async function handleCreateProject() {
   if (!form.value.name.trim()) {
@@ -68,20 +83,18 @@ function closeDialog() {
   formError.value = ''
 }
 
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
 const skeletonItems = [1, 2, 3, 4]
+
+onMounted(() => {
+  void projectsStore.fetchMyProjectIds().then((ids) => {
+    myProjectIds.value = ids
+  })
+})
 </script>
 
 <template>
-  <div class="mx-auto max-w-4xl px-6 py-10">
-    <div class="flex items-center justify-between mb-6">
+  <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-semibold tracking-tight">Проекты</h1>
         <p class="mt-1 text-sm text-muted-foreground">Управляйте проектами и приглашайте команду</p>
@@ -148,7 +161,7 @@ const skeletonItems = [1, 2, 3, 4]
       </div>
     </div>
 
-    <!-- Empty State -->
+    <!-- Empty State: no projects at all -->
     <div v-else-if="!projectsStore.hasProjects" class="text-center py-16">
       <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
         <FolderKanban class="h-8 w-8 text-muted-foreground" />
@@ -175,68 +188,55 @@ const skeletonItems = [1, 2, 3, 4]
       </div>
     </div>
 
-    <!-- Projects List -->
-    <div v-else class="space-y-4">
-      <RouterLink
-        v-for="project in projectsStore.projects"
-        :key="project.id"
-        :to="{ name: 'project', params: { id: project.id } }"
-        class="block"
-      >
-        <Card class="overflow-hidden transition-shadow hover:shadow-md">
-          <CardContent>
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex items-start gap-4 min-w-0 flex-1">
-                <Avatar
-                  v-if="project.avatar_url"
-                  class="h-10 w-10 rounded-lg text-sm"
-                  :name="project.name"
-                  :src="project.avatar_url"
-                />
-                <div
-                  v-else
-                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-                >
-                  <FolderKanban class="h-5 w-5" />
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2">
-                    <CardTitle class="text-base font-medium truncate">{{ project.name }}</CardTitle>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            class="h-6 w-6 text-muted-foreground hover:text-foreground"
-                          >
-                            <Globe v-if="project.is_public" class="h-3.5 w-3.5" />
-                            <Lock v-else class="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" align="center">
-                          <p>{{ project.is_public ? 'Публичный проект' : 'Приватный проект' }}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <CardDescription v-if="project.description" class="mt-1 line-clamp-2">{{
-                    project.description
-                  }}</CardDescription>
-                  <div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>Создан: {{ formatDate(project.created_at) }}</span>
-                    <span
-                      v-if="project.owner_id === authStore.user?.id"
-                      class="font-mono text-primary"
-                      >Вы владелец</span
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </RouterLink>
+    <!-- Projects: own + public sections -->
+    <div v-else class="space-y-8">
+      <!-- Own projects -->
+      <section>
+        <div class="mb-3 flex items-baseline gap-2">
+          <h2 class="text-lg font-medium">Мои проекты</h2>
+          <span v-if="myProjects.length > 0" class="text-sm text-muted-foreground">
+            {{ myProjects.length }}
+          </span>
+        </div>
+
+        <div v-if="myProjects.length > 0" class="space-y-4">
+          <ProjectCard v-for="project in myProjects" :key="project.id" :project="project" />
+        </div>
+
+        <div v-else class="rounded-lg border border-dashed px-6 py-10 text-center">
+          <FolderKanban class="mx-auto h-8 w-8 text-muted-foreground/50" />
+          <p class="mt-2 text-sm font-medium">Своих проектов пока нет</p>
+          <p class="mt-1 text-xs text-muted-foreground">
+            Попробуйте создать новый проект — он появится здесь.
+          </p>
+          <Button variant="outline" class="mt-3" @click="openDialog">
+            <Plus class="mr-2 h-4 w-4" />
+            Создать проект
+          </Button>
+        </div>
+      </section>
+
+      <!-- Public projects -->
+      <section>
+        <div class="mb-3 flex items-baseline gap-2">
+          <h2 class="text-lg font-medium">Публичные проекты</h2>
+          <span v-if="publicProjects.length > 0" class="text-sm text-muted-foreground">
+            {{ publicProjects.length }}
+          </span>
+        </div>
+
+        <div v-if="publicProjects.length > 0" class="space-y-4">
+          <ProjectCard v-for="project in publicProjects" :key="project.id" :project="project" />
+        </div>
+
+        <div v-else class="rounded-lg border border-dashed px-6 py-10 text-center">
+          <Globe class="mx-auto h-8 w-8 text-muted-foreground/50" />
+          <p class="mt-2 text-sm font-medium">Публичных проектов не найдено</p>
+          <p class="mt-1 text-xs text-muted-foreground">
+            Как только проект откроют для репортёров по ссылке, он появится здесь.
+          </p>
+        </div>
+      </section>
     </div>
 
     <!-- Create Project Dialog -->

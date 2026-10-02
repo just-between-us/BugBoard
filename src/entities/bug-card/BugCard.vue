@@ -171,7 +171,7 @@ function isNewBug(createdAt: string) {
             </div>
             <Badge
               :class="getStatusBadge(props.bug.status)"
-              class="text-xs gap-1 flex items-center"
+              class="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs"
             >
               <component
                 :is="getStatusIcon(props.bug.status)"
@@ -184,17 +184,15 @@ function isNewBug(createdAt: string) {
               {{ getStatusLabel(props.bug.status) }}
             </Badge>
           </div>
-          <div
-            class="mt-2 flex flex-col justify-between flex-wrap gap-2 text-xs text-muted-foreground"
-          >
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="font-mono inline-flex items-center gap-1">
-                {{ props.bug.id }}
-                <CopyButton :text="props.bug.id" label="Копировать ID" />
-              </span>
+          <div class="mt-2 flex flex-col gap-2 text-xs text-muted-foreground">
+            <div class="flex min-w-0 items-center gap-1">
+              <span class="min-w-0 truncate font-mono">{{ props.bug.id }}</span>
+              <CopyButton :text="props.bug.id" label="Копировать ID" class="shrink-0" />
             </div>
-            <div class="flex justify-between">
-              <span class="flex items-center gap-3">
+            <div class="flex items-start justify-between gap-2">
+              <span
+                class="flex min-w-0 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
+              >
                 <span>Создан: {{ formatDate(props.bug.created_at) }}</span>
                 <span v-if="props.projectName" class="truncate"
                   >Проект: {{ props.projectName }}</span
@@ -209,7 +207,7 @@ function isNewBug(createdAt: string) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          class="h-6 w-6 text-muted-foreground hover:text-foreground p-1"
+                          class="h-6 w-6 shrink-0 self-start text-muted-foreground hover:text-foreground p-1"
                         >
                           <MoreHorizontal class="h-3.5 w-3.5" />
                         </Button>

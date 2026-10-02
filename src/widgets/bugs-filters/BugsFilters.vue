@@ -102,7 +102,7 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
 
 <template>
   <div class="py-3">
-    <div class="flex items-center justify-between mb-3">
+    <div class="hidden sm:flex mb-3 flex-wrap items-center justify-between gap-2">
       <div>
         <h2 class="text-lg font-medium">Все обнаруженные ошибки</h2>
         <p class="text-sm text-muted-foreground">Список багов и задач</p>
@@ -121,6 +121,10 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
         </Tooltip>
       </TooltipProvider>
     </div>
+    <Button class="flex sm:hidden mb-3 w-full" @click="emit('open-create-bug')">
+      <Plus class="h-4 w-4 mr-2" />
+      Создать баг
+    </Button>
 
     <!-- Filters & Search -->
     <div class="space-y-3">
@@ -145,7 +149,7 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
         </Button>
       </div>
 
-      <div class="flex justify-between">
+      <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-2">
           <div
             v-if="props.statusFilter !== 'all'"
@@ -274,7 +278,6 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
           v-if="props.hasActiveFilters"
           variant="destructive"
           size="sm"
-          class="ml-2"
           @click="emit('clearAllFilters')"
         >
           <X class="h-4 w-4 mr-1" />

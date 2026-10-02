@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   AlertTriangle,
+  ArrowUpDown,
   Bug as BugIcon,
   Check,
   ChevronsUpDown,
@@ -41,6 +42,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   REPORT_FLAG_ICON,
+  REPORT_STATUS_BADGE,
   REPORT_STATUS_DOT,
   reportFlagOptions,
   reportStatusLabel,
@@ -50,6 +52,7 @@ import { cn } from '@/lib/utils'
 
 interface Props {
   projectId: string
+  isMember: boolean
 }
 
 const props = defineProps<Props>()
@@ -68,7 +71,13 @@ const savingId = ref<string | null>(null)
 const searchQuery = ref('')
 const statusFilter = ref<'all' | Report['status']>('all')
 const bugFilter = ref<'all' | 'linked' | 'unlinked'>('all')
-const sortOrder = ref<'created_desc' | 'created_asc' | 'updated_desc'>('created_desc')
+const sortBy = ref<'created_at' | 'updated_at'>('created_at')
+const sortOrder = ref<'asc' | 'desc'>('desc')
+
+const sortOptions = [
+  { value: 'created_at', label: 'Дата создания' },
+  { value: 'updated_at', label: 'Дата обновления' },
+] as const
 
 const SOFT_DELETE_MS = 10_000
 const pendingDeletes = ref<Record<string, number>>({})
@@ -102,13 +111,9 @@ const filteredReports = computed(() => {
     list = list.filter((r) => !r.bug_id)
   }
 
-  if (sortOrder.value === 'created_asc') {
-    list.sort((a, b) => a.created_at.localeCompare(b.created_at))
-  } else if (sortOrder.value === 'updated_desc') {
-    list.sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-  } else {
-    list.sort((a, b) => b.created_at.localeCompare(a.created_at))
-  }
+  const key = sortBy.value
+  const dir = sortOrder.value === 'asc' ? 1 : -1
+  list.sort((a, b) => dir * a[key].localeCompare(b[key]))
 
   return list
 })
@@ -117,14 +122,13 @@ const hasActiveFilters = computed(
   () => searchQuery.value !== '' || statusFilter.value !== 'all' || bugFilter.value !== 'all',
 )
 
-const filterChipLabel = computed(() => {
-  const parts: string[] = []
-  if (statusFilter.value !== 'all') parts.push(reportStatusLabel(statusFilter.value))
-  if (bugFilter.value === 'linked') parts.push('Привязаны к багу')
-  if (bugFilter.value === 'unlinked') parts.push('Без привязки')
-  if (searchQuery.value) parts.push('Поиск')
-  return parts.join(' · ')
-})
+const bugFilterLabel = computed(() =>
+  bugFilter.value === 'linked' ? 'Привязаны к багу' : 'Без привязки',
+)
+
+function toggleSortOrder() {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+}
 
 function reporterName(id: string): string {
   return projectsStore.profiles[id]?.display_name ?? 'Репортёр'
@@ -144,7 +148,8 @@ async function load() {
   try {
     const [list, bugList] = await Promise.all([
       projectsStore.fetchReports(props.projectId),
-      projectsStore.fetchProjectBugs(props.projectId),
+      // Баги нужны только для бейджа привязки — он показывается только участникам
+      props.isMember ? projectsStore.fetchProjectBugs(props.projectId) : Promise.resolve<Bug[]>([]),
     ])
     reports.value = list
     bugs.value = bugList
@@ -236,6 +241,8 @@ function clearFilters() {
   searchQuery.value = ''
   statusFilter.value = 'all'
   bugFilter.value = 'all'
+  sortBy.value = 'created_at'
+  sortOrder.value = 'desc'
 }
 
 const bugsById = computed(() => {
@@ -388,59 +395,101 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <!-- Не участник команды видит только свои репорты -->
+    <p v-if="!isMember && reports.length > 0" class="text-xs text-muted-foreground">
+      Показаны только ваши репорты — баги и остальные репорты видит команда проекта.
+    </p>
+
     <!-- Filters & sorting -->
-    <div v-if="reports.length > 0" class="flex flex-wrap items-center gap-2">
-      <template v-if="!hasActiveFilters">
-        <Select v-model="statusFilter">
-          <SelectTrigger class="h-8">
-            <SelectValue placeholder="Статус" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все статусы</SelectItem>
-            <SelectItem v-for="opt in reportStatusOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select v-model="bugFilter">
-          <SelectTrigger class="h-8">
-            <SelectValue placeholder="Привязка" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все репорты</SelectItem>
-            <SelectItem value="linked">Привязаны к багу</SelectItem>
-            <SelectItem value="unlinked">Без привязки</SelectItem>
-          </SelectContent>
-        </Select>
-      </template>
-
-      <div
-        v-if="hasActiveFilters"
-        class="flex justify-between items-center w-full gap-1 rounded-md bg-secondary px-2 py-1"
-      >
-        <span class="text-sm font-medium">{{ filterChipLabel }}</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          class="h-6 justify-end w-[90%]"
-          @click="clearFilters"
-          aria-label="Сбросить фильтры"
+    <div v-if="reports.length > 0" class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <div
+          v-if="statusFilter !== 'all'"
+          class="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md"
         >
-          <X class="h-3.5 w-3.5" />
-        </Button>
+          <span class="text-sm font-medium">{{ reportStatusLabel(statusFilter) }}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-6 w-6"
+            @click="statusFilter = 'all'"
+            aria-label="Сбросить фильтр статуса"
+          >
+            <X class="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <div v-else>
+          <Select v-model="statusFilter">
+            <SelectTrigger>
+              <SelectValue placeholder="Статус" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все статусы</SelectItem>
+              <SelectItem v-for="opt in reportStatusOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div
+          v-if="isMember && bugFilter !== 'all'"
+          class="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md"
+        >
+          <span class="text-sm font-medium">{{ bugFilterLabel }}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-6 w-6"
+            @click="bugFilter = 'all'"
+            aria-label="Сбросить фильтр привязки"
+          >
+            <X class="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <div v-else-if="isMember">
+          <Select v-model="bugFilter">
+            <SelectTrigger>
+              <SelectValue placeholder="Привязка" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все репорты</SelectItem>
+              <SelectItem value="linked">Привязаны к багу</SelectItem>
+              <SelectItem value="unlinked">Без привязки</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div class="flex items-center gap-1">
+          <Select v-model="sortBy">
+            <SelectTrigger>
+              <SelectValue placeholder="Сортировка" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="icon"
+            class="h-8 w-8"
+            @click="toggleSortOrder"
+            :aria-label="sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'"
+          >
+            <ArrowUpDown class="h-4 w-4" />
+            <span class="sr-only">
+              {{ sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию' }}
+            </span>
+          </Button>
+        </div>
       </div>
 
-      <Select v-model="sortOrder">
-        <SelectTrigger class="h-8">
-          <SelectValue placeholder="Сортировка" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="created_desc">Сначала новые</SelectItem>
-          <SelectItem value="created_asc">Сначала старые</SelectItem>
-          <SelectItem value="updated_desc">По дате обновления</SelectItem>
-        </SelectContent>
-      </Select>
+      <Button v-if="hasActiveFilters" variant="destructive" size="sm" @click="clearFilters">
+        <X class="h-4 w-4 mr-1" />
+        Сбросить всё
+      </Button>
     </div>
 
     <p v-if="actionError" class="text-sm text-severity-critical">{{ actionError }}</p>
@@ -480,7 +529,11 @@ onBeforeUnmount(() => {
       <Inbox class="mx-auto h-8 w-8 text-muted-foreground/50" />
       <p class="mt-2 text-sm font-medium">Репортов пока нет</p>
       <p class="mt-1 text-xs text-muted-foreground">
-        Отправьте репортёрам ссылку из шапки проекта — репорты появятся здесь.
+        {{
+          isMember
+            ? 'Отправьте репортёрам ссылку из шапки проекта — репорты появятся здесь.'
+            : 'Здесь появятся ваши репорты — баг можно отправить по ссылке из шапки проекта.'
+        }}
       </p>
     </div>
 
@@ -519,7 +572,7 @@ onBeforeUnmount(() => {
                     {{ reporterName(report.reporter_id) }}
                   </RouterLink>
                   <p class="text-xs text-muted-foreground">{{ formatDate(report.created_at) }}</p>
-                  <span class="mt-0.5 flex items-center gap-0.5">
+                  <span v-if="isMember" class="mt-0.5 flex min-w-0 items-center gap-0.5">
                     <span class="truncate font-mono text-xs text-muted-foreground">
                       ID: {{ report.id }}
                     </span>
@@ -535,66 +588,83 @@ onBeforeUnmount(() => {
               </div>
 
               <div class="flex flex-wrap items-center gap-1.5" @click.stop>
-                <!-- Status -->
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    :class="cn(buttonVariants({ variant: 'outline' }), 'h-7 gap-1.5 px-2 text-xs')"
-                    :disabled="savingId === report.id"
-                  >
-                    <span
-                      class="h-2 w-2 shrink-0 rounded-full"
-                      :class="REPORT_STATUS_DOT[report.status]"
-                    />
-                    {{ reportStatusLabel(report.status) }}
-                    <ChevronsUpDown class="h-3 w-3 opacity-50" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" class="w-44">
-                    <DropdownMenuItem
-                      v-for="opt in reportStatusOptions"
-                      :key="opt.value"
+                <template v-if="isMember">
+                  <!-- Status -->
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      :class="
+                        cn(buttonVariants({ variant: 'outline' }), 'h-7 gap-1.5 px-2 text-xs')
+                      "
                       :disabled="savingId === report.id"
-                      @click="setStatus(report, opt.value as Report['status'])"
                     >
                       <span
-                        class="h-2 mr-2 w-2 shrink-0 rounded-full"
-                        :class="REPORT_STATUS_DOT[opt.value]"
+                        class="h-2 w-2 shrink-0 rounded-full"
+                        :class="REPORT_STATUS_DOT[report.status]"
                       />
-                      {{ opt.label }}
-                      <Check v-if="report.status === opt.value" class="ml-auto h-4 w-4" />
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      {{ reportStatusLabel(report.status) }}
+                      <ChevronsUpDown class="h-3 w-3 opacity-50" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="w-44">
+                      <DropdownMenuItem
+                        v-for="opt in reportStatusOptions"
+                        :key="opt.value"
+                        :disabled="savingId === report.id"
+                        @click="setStatus(report, opt.value as Report['status'])"
+                      >
+                        <span
+                          class="h-2 mr-2 w-2 shrink-0 rounded-full"
+                          :class="REPORT_STATUS_DOT[opt.value]"
+                        />
+                        {{ opt.label }}
+                        <Check v-if="report.status === opt.value" class="ml-auto h-4 w-4" />
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
-                <!-- Flag -->
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    :class="cn(buttonVariants({ variant: 'outline' }), 'h-7 gap-1.5 px-2 text-xs')"
-                    :disabled="savingId === report.id"
-                    :title="reportStatusLabel(report.flag)"
-                    :aria-label="`Флаг: ${reportStatusLabel(report.flag)}`"
-                  >
-                    <component :is="REPORT_FLAG_ICON[report.flag]" class="h-3.5 w-3.5" />
-                    {{ reportStatusLabel(report.flag) }}
-                    <ChevronsUpDown class="h-3 w-3 opacity-50" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" class="w-44">
-                    <DropdownMenuItem
-                      v-for="opt in reportFlagOptions"
-                      :key="opt.value"
+                  <!-- Flag -->
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      :class="
+                        cn(buttonVariants({ variant: 'outline' }), 'h-7 gap-1.5 px-2 text-xs')
+                      "
                       :disabled="savingId === report.id"
-                      @click="setFlag(report, opt.value as Report['flag'])"
+                      :title="reportStatusLabel(report.flag)"
+                      :aria-label="`Флаг: ${reportStatusLabel(report.flag)}`"
                     >
-                      <component :is="REPORT_FLAG_ICON[opt.value]" class="mr-2 h-4 w-4 shrink-0" />
-                      {{ opt.label }}
-                      <Check v-if="report.flag === opt.value" class="ml-auto h-4 w-4" />
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      <component :is="REPORT_FLAG_ICON[report.flag]" class="h-3.5 w-3.5" />
+                      {{ reportStatusLabel(report.flag) }}
+                      <ChevronsUpDown class="h-3 w-3 opacity-50" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="w-44">
+                      <DropdownMenuItem
+                        v-for="opt in reportFlagOptions"
+                        :key="opt.value"
+                        :disabled="savingId === report.id"
+                        @click="setFlag(report, opt.value as Report['flag'])"
+                      >
+                        <component
+                          :is="REPORT_FLAG_ICON[opt.value]"
+                          class="mr-2 h-4 w-4 shrink-0"
+                        />
+                        {{ opt.label }}
+                        <Check v-if="report.flag === opt.value" class="ml-auto h-4 w-4" />
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
-                <Loader2
-                  v-if="savingId === report.id"
-                  class="h-4 w-4 animate-spin text-muted-foreground"
-                />
+                  <Loader2
+                    v-if="savingId === report.id"
+                    class="h-4 w-4 animate-spin text-muted-foreground"
+                  />
+                </template>
+
+                <Badge
+                  v-else
+                  :class="REPORT_STATUS_BADGE[report.status]"
+                  class="text-xs font-medium"
+                >
+                  {{ reportStatusLabel(report.status) }}
+                </Badge>
               </div>
             </div>
 
@@ -612,7 +682,10 @@ onBeforeUnmount(() => {
                   {{ report.description }}
                 </div>
               </RouterLink>
-              <div v-if="report.bug_id && bugTitleFor(report)" class="flex items-center gap-1.5">
+              <div
+                v-if="isMember && report.bug_id && bugTitleFor(report)"
+                class="flex items-center gap-1.5"
+              >
                 <button
                   type="button"
                   class="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground focus-visible:border-ring focus-visible:outline-none"
@@ -624,7 +697,7 @@ onBeforeUnmount(() => {
                 </button>
               </div>
               <span
-                v-else-if="report.bug_id"
+                v-else-if="isMember && report.bug_id"
                 class="inline-flex items-center gap-1 rounded-md border border-dashed bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground"
                 title="Баг удалён"
               >
@@ -687,7 +760,7 @@ onBeforeUnmount(() => {
                 <span v-if="report.replied_at">· {{ formatDate(report.replied_at) }}</span>
               </p>
               <p class="mt-1.5 text-sm whitespace-pre-line">{{ report.reply }}</p>
-              <div class="mt-2 flex flex-wrap gap-1">
+              <div v-if="isMember" class="mt-2 flex flex-wrap gap-1">
                 <Button
                   size="xs"
                   variant="ghost"
@@ -709,8 +782,12 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Bottom actions -->
-            <div class="mt-3 flex justify-between items-center gap-2" @click.stop>
-              <div class="flex items-center gap-2">
+            <div
+              v-if="isMember"
+              class="mt-3 flex flex-wrap items-center justify-between gap-2"
+              @click.stop
+            >
+              <div class="flex flex-wrap items-center gap-2">
                 <Button
                   v-if="replyTargetId !== report.id && !report.reply"
                   variant="outline"

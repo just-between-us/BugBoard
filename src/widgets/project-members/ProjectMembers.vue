@@ -230,7 +230,7 @@ watch(
             v-if="isOwner && member.role !== 'owner'"
             variant="ghost"
             size="icon"
-            class="h-8 w-8 text-muted-foreground hover:text-severity-critical"
+            class="h-8 w-8 shrink-0 text-muted-foreground hover:text-severity-critical"
             title="Удалить из проекта"
             aria-label="Удалить из проекта"
             @click="askDelete(member)"

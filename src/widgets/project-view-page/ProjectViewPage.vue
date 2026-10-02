@@ -20,6 +20,7 @@ const projectId = computed<string>(() => route.params.id as string)
 
 const activeTab = ref<'bugs' | 'reports' | 'members' | 'settings'>('bugs')
 const isCreateBugOpen = ref(false)
+const isMember = ref(false)
 
 const searchQuery = ref('')
 const statusFilter = ref<string>('all')
@@ -82,9 +83,14 @@ const filteredBugs = computed(() => {
 async function loadProject() {
   const id = projectId.value
   if (!id) return
+  // Членство проверяем до загрузки проекта: от него зависит режим страницы
+  // (полная с вкладками или простой просмотр), поэтому флаг должен быть готов
+  // к первому рендеру
+  isMember.value = await projectsStore.isProjectMember(id)
   try {
     await projectsStore.fetchProject(id)
-    await projectsStore.fetchBugs(id)
+    // Баги и вкладки не-участнику не показываются — запрос не нужен
+    if (isMember.value) await projectsStore.fetchBugs(id)
   } catch {
     router.push({ name: 'projects' })
   }
@@ -148,7 +154,7 @@ watch(
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl px-6 py-6">
+  <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
     <!-- Back Button -->
     <Button variant="ghost" size="sm" class="mb-4 gap-1" @click="router.push({ name: 'projects' })">
       <ChevronLeft class="h-4 w-4" />
@@ -156,72 +162,82 @@ watch(
     </Button>
 
     <!-- Project Header -->
-    <ProjectHeader />
+    <ProjectHeader :is-member="isMember" />
 
     <!-- Loading Project (when no current project yet) -->
-    <div
-      v-if="!projectsStore.currentProject && projectsStore.loading"
-      class="animate-pulse space-y-4"
-    >
+    <div v-if="!projectsStore.currentProject" class="animate-pulse space-y-4">
       <div class="h-12 w-3/4 bg-muted rounded-lg" />
       <div class="h-4 w-1/2 bg-muted rounded" />
     </div>
 
     <!-- Main Content (when project loaded) -->
     <div v-else-if="projectsStore.currentProject">
-      <!-- Tabs Navigation -->
-      <ProjectTabs class="mb-3" :activeTab="activeTab" @updateTab="activeTab = $event" />
+      <!-- Не участник команды: простой просмотр чужого проекта — только свои репорты -->
+      <ProjectReports v-if="!isMember" :project-id="projectId" :is-member="false" />
 
-      <!-- Sticky Header: Bugs Filters (only for bugs tab) -->
-      <div v-if="activeTab === 'bugs'" class="sticky top-0 z-20 bg-background/90 backdrop-blur-sm">
-        <BugsFilters
+      <template v-else>
+        <!-- Tabs Navigation -->
+        <ProjectTabs class="mb-3" :activeTab="activeTab" @updateTab="activeTab = $event" />
+
+        <!-- Sticky Header: Bugs Filters (only for bugs tab) -->
+        <div
+          v-if="activeTab === 'bugs'"
+          class="sticky top-14 z-20 bg-background/90 backdrop-blur-sm md:top-0"
+        >
+          <BugsFilters
+            :searchQuery="searchQuery"
+            :statusFilter="statusFilter"
+            :severityFilter="severityFilter"
+            :areaFilter="areaFilter"
+            :sortBy="sortBy"
+            :sortOrder="sortOrder"
+            :hasActiveFilters="hasActiveFilters()"
+            @update:searchQuery="searchQuery = $event"
+            @update:statusFilter="statusFilter = $event"
+            @update:severityFilter="severityFilter = $event"
+            @update:areaFilter="areaFilter = $event"
+            @update:sortBy="sortBy = $event"
+            @toggleSortOrder="toggleSortOrder"
+            @clearAllFilters="clearAllFilters"
+            @open-create-bug="openCreateBug"
+          />
+        </div>
+
+        <!-- Bug List (scrollable) -->
+        <BugList
+          v-if="activeTab === 'bugs'"
+          :filteredBugs="filteredBugs"
+          :loading="projectsStore.loading"
+          :error="projectsStore.error"
           :searchQuery="searchQuery"
           :statusFilter="statusFilter"
           :severityFilter="severityFilter"
           :areaFilter="areaFilter"
-          :sortBy="sortBy"
-          :sortOrder="sortOrder"
-          :hasActiveFilters="hasActiveFilters()"
-          @update:searchQuery="searchQuery = $event"
-          @update:statusFilter="statusFilter = $event"
-          @update:severityFilter="severityFilter = $event"
-          @update:areaFilter="areaFilter = $event"
-          @update:sortBy="sortBy = $event"
-          @toggleSortOrder="toggleSortOrder"
-          @clearAllFilters="clearAllFilters"
-          @open-create-bug="openCreateBug"
+          @retry="projectsStore.fetchBugs(projectId)"
+          @clearFilters="clearAllFilters"
         />
-      </div>
 
-      <!-- Bug List (scrollable) -->
-      <BugList
-        v-if="activeTab === 'bugs'"
-        :filteredBugs="filteredBugs"
-        :loading="projectsStore.loading"
-        :error="projectsStore.error"
-        :searchQuery="searchQuery"
-        :statusFilter="statusFilter"
-        :severityFilter="severityFilter"
-        :areaFilter="areaFilter"
-        @retry="projectsStore.fetchBugs(projectId)"
-        @clearFilters="clearAllFilters"
-      />
+        <!-- Other Tabs Placeholders -->
+        <!-- Members -->
+        <ProjectMembers v-else-if="activeTab === 'members'" :project-id="projectId" />
 
-      <!-- Other Tabs Placeholders -->
-      <!-- Members -->
-      <ProjectMembers v-else-if="activeTab === 'members'" :project-id="projectId" />
+        <ProjectReports
+          v-else-if="activeTab === 'reports'"
+          :project-id="projectId"
+          :is-member="isMember"
+        />
 
-      <ProjectReports v-else-if="activeTab === 'reports'" :project-id="projectId" />
-
-      <div v-else-if="activeTab === 'settings'" class="text-center py-12">
-        <Settings class="mx-auto h-12 w-12 text-muted-foreground/50" />
-        <h3 class="mt-4 text-lg font-medium">Настройки</h3>
-        <p class="mt-1 text-sm text-muted-foreground">Настройки проекта</p>
-      </div>
+        <div v-else-if="activeTab === 'settings'" class="text-center py-12">
+          <Settings class="mx-auto h-12 w-12 text-muted-foreground/50" />
+          <h3 class="mt-4 text-lg font-medium">Настройки</h3>
+          <p class="mt-1 text-sm text-muted-foreground">Настройки проекта</p>
+        </div>
+      </template>
     </div>
 
-    <!-- Create Bug Dialog -->
+    <!-- Create Bug Dialog (только участникам) -->
     <CreateBugDialog
+      v-if="isMember"
       :isOpen="isCreateBugOpen"
       :submitting="projectsStore.loading"
       :projectId="projectId"

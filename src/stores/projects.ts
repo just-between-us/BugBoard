@@ -420,6 +420,25 @@ export const useProjectsStore = defineStore('projects', () => {
     return data as Report
   }
 
+  async function fetchMyProjectIds(): Promise<Set<string> | null> {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return new Set()
+
+      const { data, error: fetchError } = await supabase
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', user.id)
+
+      if (fetchError) throw fetchError
+      return new Set((data ?? []).map((row) => row.project_id))
+    } catch {
+      return null
+    }
+  }
+
   async function fetchProjectMembers(projectId: string): Promise<ProjectMember[]> {
     const { data, error: fetchError } = await supabase
       .from('project_members')
@@ -688,6 +707,7 @@ export const useProjectsStore = defineStore('projects', () => {
     fetchReportsByBug,
     updateReport,
     fetchProjectMembers,
+    fetchMyProjectIds,
     fetchAllProfiles,
     addProjectMember,
     removeProjectMember,

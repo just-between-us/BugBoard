@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Globe, Lock, Settings, Trash2, MoreHorizontal, Camera, Loader2, Send } from '@lucide/vue'
-import { ref, computed, onMounted } from 'vue'
+import { Globe, Lock, Camera, Loader2, Send } from '@lucide/vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
@@ -9,13 +9,12 @@ import { Avatar } from '@/components/avatar'
 import { CopyButton } from '@/components/copy-button'
 import { toUserError } from '@/lib/format'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
+
+interface Props {
+  isMember: boolean
+}
+
+const props = defineProps<Props>()
 
 const router = useRouter()
 const route = useRoute()
@@ -34,8 +33,6 @@ function formatDate(dateString: string) {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   })
 }
 
@@ -43,7 +40,6 @@ function isOwner() {
   return projectsStore.currentProject?.owner_id === authStore.user?.id
 }
 
-const canEditAvatar = ref(false)
 const avatarInput = ref<HTMLInputElement | null>(null)
 const uploadingAvatar = ref(false)
 const avatarError = ref<string | null>(null)
@@ -68,15 +64,6 @@ async function handleAvatarFile(event: Event) {
     uploadingAvatar.value = false
   }
 }
-
-onMounted(async () => {
-  canEditAvatar.value = await projectsStore.isProjectMember(route.params.id as string)
-})
-
-async function confirmDelete() {
-  if (!confirm('Удалить проект? Это действие нельзя отменить.')) return
-  alert('Удаление проекта будет реализовано позже')
-}
 </script>
 
 <template>
@@ -91,7 +78,7 @@ async function confirmDelete() {
               :src="projectsStore.currentProject.avatar_url"
             />
             <button
-              v-if="canEditAvatar"
+              v-if="props.isMember"
               type="button"
               class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground disabled:opacity-50"
               :disabled="uploadingAvatar"
@@ -112,8 +99,24 @@ async function confirmDelete() {
             />
           </div>
           <div class="min-w-0">
-            <h1 class="text-2xl font-semibold tracking-tight truncate">
+            <h1 class="text-2xl flex items-center gap-4 font-semibold tracking-tight truncate">
               {{ projectsStore.currentProject.name }}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Globe v-if="projectsStore.currentProject.is_public" class="h-3.5 w-3.5 mt-1" />
+                    <Lock v-else class="h-3.5 w-3.5 mt-1" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center">
+                    <p>
+                      {{
+                        (projectsStore.currentProject.is_public ? 'Публичный' : 'Приватный') +
+                        (props.isMember ? ', можно изменить в настройках' : '')
+                      }}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </h1>
             <p
               v-if="projectsStore.currentProject.description"
@@ -124,11 +127,10 @@ async function confirmDelete() {
             <p v-if="avatarError" class="mt-1 text-xs text-severity-critical">
               {{ avatarError }}
             </p>
-            <div
-              class="mt-4 flex items-center justify-between flex-wrap gap-2 text-xs text-muted-foreground"
-            >
-              <span class="font-mono"> ID: {{ projectsStore.currentProject.id }} </span>
-              <span> ● </span>
+            <div class="mt-4 flex flex-col gap-1 text-xs text-muted-foreground">
+              <span class="min-w-0 truncate font-mono">
+                ID: {{ projectsStore.currentProject.id }}
+              </span>
               <span>Создан: {{ formatDate(projectsStore.currentProject.created_at) }}</span>
             </div>
             <span v-if="isOwner()" class="font-mono text-primary text-xs">Вы владелец</span>
@@ -136,18 +138,25 @@ async function confirmDelete() {
         </div>
       </div>
 
-      <div class="flex items-center gap-2 sm:ml-auto">
+      <div class="flex flex-col items-start gap-2 sm:ml-auto sm:flex-row sm:items-center">
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="outline" size="sm" class="gap-1">
-                <Globe v-if="projectsStore.currentProject.is_public" class="h-3.5 w-3.5" />
-                <Lock v-else class="h-3.5 w-3.5" />
-                <span>{{
-                  projectsStore.currentProject.is_public ? 'Публичный' : 'Приватный'
-                }}</span>
-              </Button>
-            </TooltipTrigger>
+            <div v-if="projectsStore.currentProject.is_public" class="flex items-center gap-1">
+              <TooltipTrigger as-child>
+                <Button variant="outline" size="sm" class="gap-1" as-child>
+                  <a :href="reportUrl" target="_blank" rel="noopener">
+                    <Send class="h-3.5 w-3.5" />
+                    Ссылка для репортёров
+                  </a>
+                </Button>
+              </TooltipTrigger>
+              <CopyButton
+                :text="reportUrl"
+                label="Копировать ссылку для репортёров"
+                feedback="Ссылка скопирована"
+                icon-class="h-3.5 w-3.5 ml-2"
+              />
+            </div>
             <TooltipContent side="top" align="center">
               <p>
                 {{
@@ -156,58 +165,6 @@ async function confirmDelete() {
                     : 'Только для участников'
                 }}
               </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <div v-if="projectsStore.currentProject.is_public" class="flex items-center gap-1">
-          <Button variant="outline" size="sm" class="gap-1" as-child>
-            <a :href="reportUrl" target="_blank" rel="noopener">
-              <Send class="h-3.5 w-3.5" />
-              Ссылка для репортёров
-            </a>
-          </Button>
-          <CopyButton
-            :text="reportUrl"
-            label="Копировать ссылку для репортёров"
-            feedback="Ссылка скопирована"
-            icon-class="h-3.5 w-3.5 ml-2"
-          />
-        </div>
-
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="ghost" size="icon" class="h-8 w-8">
-                    <MoreHorizontal class="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="w-56">
-                  <DropdownMenuItem
-                    class="w-full"
-                    @click="
-                      router.push({
-                        name: 'project',
-                        params: { id: route.params.id },
-                        query: { tab: 'settings' },
-                      })
-                    "
-                  >
-                    <Settings class="h-4 w-4 mr-2" />
-                    Настройки
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem class="text-severity-critical w-full" @click="confirmDelete">
-                    <Trash2 class="h-4 w-4 mr-2" />
-                    Удалить проект
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TooltipTrigger>
-            <TooltipContent side="top" align="center">
-              <p>Дополнительные действия</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
