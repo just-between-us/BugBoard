@@ -14,11 +14,7 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <RekaSelectGroup
-    data-slot="select-group"
-    :as="props.as"
-    :class="cn('', props.class)"
-  >
+  <RekaSelectGroup data-slot="select-group" :as="props.as" :class="cn('', props.class)">
     <slot />
   </RekaSelectGroup>
 </template>

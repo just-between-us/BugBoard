@@ -44,13 +44,14 @@ const skeletonBugs = [1, 2, 3]
     </div>
   </div>
 
-  <div v-else-if="props.error" class="rounded-md border border-severity-critical/20 bg-severity-critical/5 p-4">
+  <div
+    v-else-if="props.error"
+    class="rounded-md border border-severity-critical/20 bg-severity-critical/5 p-4"
+  >
     <div class="flex items-center gap-3 text-sm text-severity-critical">
       <AlertTriangle class="h-4 w-4 shrink-0" />
       <span>{{ props.error }}</span>
-      <Button variant="ghost" size="sm" @click="props.onRetry">
-        Повторить
-      </Button>
+      <Button variant="ghost" size="sm" @click="props.onRetry"> Повторить </Button>
     </div>
   </div>
 
@@ -65,9 +66,7 @@ const skeletonBugs = [1, 2, 3]
       "
       class="text-center py-8"
     >
-      <div
-        class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted"
-      >
+      <div class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
         <Search class="h-5 w-5 text-muted-foreground" />
       </div>
       <h3 class="text-lg font-medium">Ничего не найдено</h3>
@@ -79,11 +78,6 @@ const skeletonBugs = [1, 2, 3]
       </Button>
     </div>
 
-    <BugCard
-      v-else
-      v-for="bug in props.filteredBugs"
-      :key="bug.id"
-      :bug="bug"
-    />
+    <BugCard v-else v-for="bug in props.filteredBugs" :key="bug.id" :bug="bug" />
   </div>
 </template>

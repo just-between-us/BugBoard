@@ -23,10 +23,12 @@ const props = withDefaults(defineProps<Props>(), {
     :decorative="props.decorative"
     data-slot="separator"
     :as="props.as"
-    :class="cn(
-      'shrink-0 bg-border',
-      props.orientation === 'horizontal' ? 'h-[1px] w-full' : 'h-full w-[1px]',
-      props.class
-    )"
+    :class="
+      cn(
+        'shrink-0 bg-border',
+        props.orientation === 'horizontal' ? 'h-[1px] w-full' : 'h-full w-[1px]',
+        props.class,
+      )
+    "
   />
 </template>

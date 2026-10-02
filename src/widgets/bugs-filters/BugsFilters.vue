@@ -167,12 +167,8 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
             </Button>
           </div>
           <div v-else>
-            <Select
-              :model-value="props.statusFilter"
-              @update:modelValue="handleStatusFilterUpdate"
-              class="w-36"
-            >
-              <SelectTrigger>
+            <Select :model-value="props.statusFilter" @update:modelValue="handleStatusFilterUpdate">
+              <SelectTrigger class="w-36">
                 <SelectValue placeholder="Статус" />
               </SelectTrigger>
               <SelectContent>
@@ -203,9 +199,8 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
             <Select
               :model-value="props.severityFilter"
               @update:modelValue="handleSeverityFilterUpdate"
-              class="w-36"
             >
-              <SelectTrigger>
+              <SelectTrigger class="w-36">
                 <SelectValue placeholder="Важность" />
               </SelectTrigger>
               <SelectContent>
@@ -233,12 +228,8 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
             </Button>
           </div>
           <div v-else>
-            <Select
-              :model-value="props.areaFilter"
-              @update:modelValue="handleAreaFilterUpdate"
-              class="w-40"
-            >
-              <SelectTrigger>
+            <Select :model-value="props.areaFilter" @update:modelValue="handleAreaFilterUpdate">
+              <SelectTrigger class="w-40">
                 <SelectValue placeholder="Область" />
               </SelectTrigger>
               <SelectContent>

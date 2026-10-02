@@ -14,11 +14,7 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <RekaDialogTrigger
-    data-slot="dialog-trigger"
-    :as="props.as"
-    :class="cn('', props.class)"
-  >
+  <RekaDialogTrigger data-slot="dialog-trigger" :as="props.as" :class="cn('', props.class)">
     <slot />
   </RekaDialogTrigger>
 </template>

@@ -14,11 +14,7 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <Primitive
-    data-slot="dialog-title"
-    :as="as"
-    :class="cn('text-lg font-semibold', props.class)"
-  >
+  <Primitive data-slot="dialog-title" :as="as" :class="cn('text-lg font-semibold', props.class)">
     <slot />
   </Primitive>
 </template>

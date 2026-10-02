@@ -113,12 +113,7 @@ function closeDialog() {
 </script>
 
 <template>
-  <Dialog
-    :open="props.isOpen"
-    @update:open="props.onClose"
-    @close="closeDialog"
-    class="fixed inset-0 z-50"
-  >
+  <Dialog :open="props.isOpen" @update:open="props.onClose" @close="closeDialog">
     <DialogContent class="sm:max-w-130">
       <DialogHeader>
         <DialogTitle>Новый баг</DialogTitle>

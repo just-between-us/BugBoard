@@ -1,24 +1,16 @@
 <script setup lang="ts">
 import type { PrimitiveProps } from 'reka-ui'
-import type { HTMLAttributes } from 'vue'
 import { SelectRoot as RekaSelectRoot } from 'reka-ui'
-import { cn } from '@/lib/utils'
 
-interface Props extends PrimitiveProps {
-  class?: HTMLAttributes['class']
-}
-
-const props = withDefaults(defineProps<Props>(), {
+// Внимание: reka SelectRoot рендерит фрагмент (PopperRoot без элемента) —
+// атрибуты/классы, переданные в корень, в DOM не попадают.
+const props = withDefaults(defineProps<PrimitiveProps>(), {
   as: 'div',
 })
 </script>
 
 <template>
-  <RekaSelectRoot
-    data-slot="select"
-    :as="props.as"
-    :class="cn('', props.class)"
-  >
+  <RekaSelectRoot :as="props.as">
     <slot />
   </RekaSelectRoot>
 </template>
