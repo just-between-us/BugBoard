@@ -82,8 +82,8 @@ watch(userId, load, { immediate: true })
 
     <!-- Loading -->
     <div v-if="state === 'loading'" class="space-y-6" role="status" aria-label="Загрузка профиля">
-      <Card class="gap-4">
-        <CardContent class="flex animate-pulse items-center gap-4">
+      <Card class="gap-4 max-sm:border-0 max-sm:bg-transparent max-sm:py-0 max-sm:shadow-none">
+        <CardContent class="flex animate-pulse items-center gap-4 max-sm:px-0">
           <div class="h-16 w-16 shrink-0 rounded-full bg-muted" />
           <div class="flex-1 space-y-2">
             <div class="h-6 w-48 rounded bg-muted" />
@@ -133,8 +133,8 @@ watch(userId, load, { immediate: true })
 
     <!-- Ready -->
     <template v-else-if="profile">
-      <Card class="gap-4">
-        <CardContent class="flex flex-wrap items-center gap-4">
+      <Card class="gap-4 max-sm:border-0 max-sm:bg-transparent max-sm:py-0 max-sm:shadow-none">
+        <CardContent class="flex flex-wrap items-center gap-4 max-sm:px-0">
           <Avatar
             class="h-16 w-16 text-xl"
             :name="profile.display_name"
