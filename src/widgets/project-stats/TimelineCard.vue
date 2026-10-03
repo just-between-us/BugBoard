@@ -159,7 +159,7 @@ const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, {
         <ChartContainer
           :config="chartConfig"
           cursor
-          class="aspect-auto h-[250px] w-full [&_.tick>line]:!stroke-border/50"
+          class="aspect-auto h-62.5 w-full [&_.tick>line]:stroke-border/50!"
         >
           <VisXYContainer :data="points" :y-domain="yDomain">
             <VisArea

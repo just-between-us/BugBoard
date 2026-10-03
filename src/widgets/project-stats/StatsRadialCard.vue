@@ -64,7 +64,7 @@ function share(count: number): string {
           </VisSingleContainer>
         </ChartContainer>
 
-        <ul class="w-full space-y-2">
+        <ul class="w-full space-y-2 pb-4">
           <li v-for="slice in segments" :key="slice.key" class="flex items-center gap-2 text-sm">
             <span
               class="h-2.5 w-2.5 shrink-0 rounded-xs"

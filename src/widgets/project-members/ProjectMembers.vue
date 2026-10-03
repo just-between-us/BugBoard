@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { AlertTriangle, ChevronsUpDown, Loader2, Plus, Trash2, Users } from '@lucide/vue'
+import { AlertTriangle, ChevronsUpDown, Loader2, Plus, Users } from '@lucide/vue'
 import type { ProfileSummary, ProjectMember } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
-import { formatDate, toUserError } from '@/lib/format'
+import { toUserError } from '@/lib/format'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/avatar'
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import MemberCard from '@/entities/member-card/MemberCard.vue'
 
 interface Props {
   projectId: string
@@ -196,87 +197,21 @@ watch(
 
     <!-- Members list -->
     <div v-else class="space-y-3">
-      <div v-for="member in members" :key="member.id" class="rounded-lg border p-3">
-        <div class="flex items-center gap-3">
-          <Avatar
-            class="h-9 w-9 text-sm"
-            :name="projectsStore.profileName(member.user_id)"
-            :src="projectsStore.profileAvatar(member.user_id)"
-          />
-
-          <div class="min-w-0 flex-1">
-            <p class="flex flex-wrap items-center gap-2">
-              <RouterLink
-                :to="{ name: 'user-profile', params: { userId: member.user_id } }"
-                class="truncate font-medium underline-offset-4 hover:underline"
-              >
-                {{ projectsStore.profileName(member.user_id) }}
-              </RouterLink>
-              <Badge
-                v-if="member.role === 'owner'"
-                class="bg-primary/10 text-xs text-primary"
-                variant="secondary"
-              >
-                Владелец
-              </Badge>
-              <span v-if="isMemberSelf(member)" class="text-xs text-muted-foreground">вы</span>
-            </p>
-            <p class="mt-0.5 text-xs text-muted-foreground">
-              В проекте с {{ formatDate(member.created_at) }}
-            </p>
-          </div>
-
-          <Button
-            v-if="isOwner && member.role !== 'owner'"
-            variant="ghost"
-            size="icon"
-            class="h-8 w-8 shrink-0 text-muted-foreground hover:text-severity-critical"
-            title="Удалить из проекта"
-            aria-label="Удалить из проекта"
-            @click="askDelete(member)"
-          >
-            <Trash2 class="h-4 w-4" />
-          </Button>
-        </div>
-
-        <!-- Inline delete confirm -->
-        <div
-          v-if="deleteTarget?.id === member.id"
-          class="mt-3 rounded-md border border-severity-critical/40 bg-severity-critical/5 p-3"
-          role="alertdialog"
-          aria-label="Подтверждение удаления участника"
-        >
-          <p class="text-sm font-medium">Удалить участника?</p>
-          <p class="mt-1 text-xs text-muted-foreground">
-            Он потеряет доступ к проекту и его багам. Вернуть можно, добавив заново.
-          </p>
-          <p v-if="deleteError" class="mt-1 text-xs text-severity-critical">
-            {{ deleteError }}
-          </p>
-          <div class="mt-2 flex flex-wrap gap-1.5">
-            <Button
-              size="sm"
-              variant="destructive"
-              class="h-8"
-              :disabled="deleteSaving"
-              @click="confirmDelete"
-            >
-              <Loader2 v-if="deleteSaving" class="h-4 w-4 animate-spin" />
-              <Trash2 v-else class="h-4 w-4" />
-              {{ deleteSaving ? 'Удаляем…' : 'Удалить' }}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              class="h-8"
-              :disabled="deleteSaving"
-              @click="closeDelete"
-            >
-              Отмена
-            </Button>
-          </div>
-        </div>
-      </div>
+      <MemberCard
+        v-for="member in members"
+        :key="member.id"
+        :member="member"
+        :name="projectsStore.profileName(member.user_id)"
+        :avatar="projectsStore.profileAvatar(member.user_id)"
+        :can-delete="isOwner && member.role !== 'owner'"
+        :is-self="isMemberSelf(member)"
+        :confirming="deleteTarget?.id === member.id"
+        :delete-saving="deleteSaving"
+        :delete-error="deleteError"
+        @ask-delete="askDelete(member)"
+        @confirm-delete="confirmDelete"
+        @cancel-delete="closeDelete"
+      />
 
       <div
         v-if="members.length === 0"

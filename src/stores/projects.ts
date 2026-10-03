@@ -79,6 +79,11 @@ export interface Report {
   updated_at: string
 }
 
+export interface SharedProject {
+  id: string
+  name: string
+}
+
 interface CreateReportInput {
   project_id: string
   title: string
@@ -577,6 +582,58 @@ export const useProjectsStore = defineStore('projects', () => {
     return (data ?? []).map((row) => row.created_at as string)
   }
 
+  async function fetchCommentsByAuthor(authorId: string): Promise<BugComment[]> {
+    const { data, error: fetchError } = await supabase
+      .from('bug_comments')
+      .select('*')
+      .eq('author_id', authorId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+
+    if (fetchError) throw fetchError
+    return (data ?? []) as BugComment[]
+  }
+
+  async function fetchReportsByReporter(reporterId: string): Promise<Report[]> {
+    const { data, error: fetchError } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('reporter_id', reporterId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+
+    if (fetchError) throw fetchError
+    return (data ?? []) as Report[]
+  }
+
+  async function fetchSharedProjects(otherUserId: string): Promise<SharedProject[]> {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return []
+
+    const { data: myRows, error: myError } = await supabase
+      .from('project_members')
+      .select('project_id')
+      .eq('user_id', user.id)
+
+    if (myError) throw myError
+    const myIds = (myRows ?? []).map((row) => row.project_id)
+    if (myIds.length === 0) return []
+
+    const { data: sharedRows, error: sharedError } = await supabase
+      .from('project_members')
+      .select('project_id, projects ( id, name )')
+      .eq('user_id', otherUserId)
+      .in('project_id', myIds)
+
+    if (sharedError) throw sharedError
+    return (sharedRows ?? [])
+      .map((row) => row.projects as unknown as SharedProject | null)
+      .filter((project): project is SharedProject => project !== null)
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+  }
+
   function clearCurrentBug() {
     currentBug.value = null
     comments.value = []
@@ -745,6 +802,9 @@ export const useProjectsStore = defineStore('projects', () => {
     fetchBugsByAuthor,
     fetchCommentDatesByAuthor,
     fetchReportDatesByReporter,
+    fetchCommentsByAuthor,
+    fetchReportsByReporter,
+    fetchSharedProjects,
     createProject,
     uploadProjectAvatar,
     createBug,

@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AlertTriangle, Bug, ChevronLeft, SearchX } from '@lucide/vue'
-import type { BugWithProject, PublicProfile } from '@/stores/projects'
+import { AlertTriangle, Activity, Bug, ChevronLeft, Info, SearchX } from '@lucide/vue'
+import type {
+  BugComment,
+  BugWithProject,
+  PublicProfile,
+  Report,
+  SharedProject,
+} from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { formatDateOnly, toUserError } from '@/lib/format'
@@ -11,6 +17,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar } from '@/components/avatar'
 import BugCard from '@/entities/bug-card/BugCard.vue'
+import ActivityHeatmap from '@/entities/activity-heatmap/ActivityHeatmap.vue'
+import ActivityFeed from '@/entities/activity-feed/ActivityFeed.vue'
 
 type PageState = 'loading' | 'ready' | 'not-found' | 'error'
 
@@ -29,6 +37,18 @@ const bugs = ref<BugWithProject[]>([])
 const bugsLoading = ref(false)
 const bugsError = ref<string | null>(null)
 
+const comments = ref<BugComment[]>([])
+const reports = ref<Report[]>([])
+const activityLoading = ref(false)
+const activityError = ref<string | null>(null)
+const sharedProjects = ref<SharedProject[] | null>(null)
+
+const heatmapDates = computed(() => [
+  ...bugs.value.map((b) => b.created_at),
+  ...comments.value.map((c) => c.created_at),
+  ...reports.value.map((r) => r.created_at),
+])
+
 const isOwnProfile = computed(() => !!authStore.user && authStore.user.id === userId.value)
 
 async function load() {
@@ -37,6 +57,10 @@ async function load() {
   profile.value = null
   bugs.value = []
   bugsError.value = null
+  comments.value = []
+  reports.value = []
+  activityError.value = null
+  sharedProjects.value = null
 
   try {
     const visibleProfile = await projectsStore.fetchProfileById(userId.value)
@@ -47,6 +71,8 @@ async function load() {
     profile.value = visibleProfile
     state.value = 'ready'
     void loadBugs()
+    if (isOwnProfile.value) void loadActivity()
+    if (!isOwnProfile.value) void loadSharedProjects()
   } catch (e) {
     pageError.value = toUserError(e)
     state.value = 'error'
@@ -62,6 +88,31 @@ async function loadBugs() {
     bugsError.value = toUserError(e)
   } finally {
     bugsLoading.value = false
+  }
+}
+
+async function loadActivity() {
+  activityLoading.value = true
+  activityError.value = null
+  try {
+    const [commentList, reportList] = await Promise.all([
+      projectsStore.fetchCommentsByAuthor(userId.value),
+      projectsStore.fetchReportsByReporter(userId.value),
+    ])
+    comments.value = commentList
+    reports.value = reportList
+  } catch (e) {
+    activityError.value = toUserError(e)
+  } finally {
+    activityLoading.value = false
+  }
+}
+
+async function loadSharedProjects() {
+  try {
+    sharedProjects.value = await projectsStore.fetchSharedProjects(userId.value)
+  } catch {
+    sharedProjects.value = null
   }
 }
 
@@ -162,6 +213,57 @@ watch(userId, load, { immediate: true })
         </CardContent>
       </Card>
 
+      <!-- Activity (own profile only, RLS) -->
+      <section v-if="isOwnProfile" class="mt-6">
+        <Card class="max-sm:border-0 max-sm:bg-transparent max-sm:py-0 max-sm:shadow-none">
+          <CardContent class="max-sm:px-0">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <h2 class="flex items-center gap-2 text-lg font-medium">
+                <Activity class="h-5 w-5 text-muted-foreground" />
+                Активность
+              </h2>
+              <span class="text-xs text-muted-foreground">Видна только вам</span>
+            </div>
+
+            <div
+              v-if="activityLoading || bugsLoading"
+              class="mt-4 animate-pulse space-y-2"
+              role="status"
+              aria-label="Загрузка активности"
+            >
+              <div class="h-3 w-full rounded bg-muted" />
+              <div class="h-3 w-5/6 rounded bg-muted" />
+              <span class="sr-only">Загрузка активности…</span>
+            </div>
+
+            <div
+              v-else-if="activityError"
+              class="mt-4 rounded-md border border-severity-critical/20 bg-severity-critical/5 p-4"
+            >
+              <div class="flex flex-wrap items-center gap-3 text-sm text-severity-critical">
+                <AlertTriangle class="h-4 w-4 shrink-0" />
+                <span>{{ activityError }}</span>
+                <Button variant="ghost" size="sm" class="ml-auto" @click="loadActivity">
+                  Повторить
+                </Button>
+              </div>
+            </div>
+
+            <div v-else class="mt-4 flex flex-wrap items-start justify-center gap-x-6 gap-y-4">
+              <div class="max-w-full shrink-0">
+                <ActivityHeatmap :dates="heatmapDates" />
+              </div>
+              <ActivityFeed
+                class="min-w-35 flex-1"
+                :bugs="bugs"
+                :comments="comments"
+                :reports="reports"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       <!-- Bugs -->
       <section class="mt-6">
         <div class="flex items-center justify-between gap-3">
@@ -172,6 +274,39 @@ watch(userId, load, { immediate: true })
           <Badge v-if="!bugsLoading && !bugsError" variant="secondary">
             {{ bugs.length }}
           </Badge>
+        </div>
+
+        <div
+          v-if="isOwnProfile"
+          class="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground"
+        >
+          <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>Баги видите вы и участники ваших проектов.</span>
+        </div>
+        <div
+          v-else-if="sharedProjects && sharedProjects.length > 0"
+          class="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground"
+        >
+          <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span class="flex flex-wrap items-center gap-1">
+            Вы видите баги только из общих проектов:
+            <Badge v-for="project in sharedProjects" :key="project.id" variant="secondary">
+              {{ project.name }}
+            </Badge>
+          </span>
+        </div>
+        <div
+          v-else-if="sharedProjects !== null"
+          class="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground"
+        >
+          <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>
+            Чтобы увидеть баги, созданные этим пользователем, начните с ним общий проект.
+          </span>
+        </div>
+        <div v-else class="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
+          <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>Показываются только баги, доступные вам.</span>
         </div>
 
         <div v-if="bugsLoading" class="mt-4 space-y-3" role="status" aria-label="Загрузка багов">
@@ -208,7 +343,6 @@ watch(userId, load, { immediate: true })
         >
           <Bug class="mx-auto h-8 w-8 text-muted-foreground/50" />
           <p class="mt-2 text-sm font-medium">Багов пока нет</p>
-          <p class="mt-1 text-xs text-muted-foreground">Показываются только баги, доступные вам.</p>
         </div>
 
         <div v-else class="mt-4 space-y-3">

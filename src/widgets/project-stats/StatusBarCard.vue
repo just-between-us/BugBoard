@@ -36,8 +36,6 @@ const yDomain = computed<[number | undefined, number | undefined]>(() => {
   return [0, Math.max(max, 1)]
 })
 
-const tickValues = computed(() => rows.value.map((_, index) => index))
-
 const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, {
   labelFormatter: (d: number | Date) => {
     if (typeof d !== 'number') return ''
@@ -53,7 +51,7 @@ const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, {
       <CardDescription class="mt-1">Распределение багов по статусам</CardDescription>
     </CardHeader>
 
-    <CardContent class="px-2 py-5 sm:px-6 flex flex-col justify-between h-full">
+    <CardContent class="py-5 px-6 flex flex-col justify-between h-full">
       <template v-if="total > 0">
         <ChartContainer
           :config="chartConfig"
@@ -85,19 +83,6 @@ const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, {
               :domain-line="false"
               :grid-line="true"
               :tick-format="(v: number) => String(Math.round(v))"
-              tick-text-color="var(--muted-foreground)"
-            />
-            <VisAxis
-              type="x"
-              :x="(d: StatusRow, i: number) => i"
-              :tick-values="tickValues"
-              :num-ticks="rows.length || 1"
-              :tick-line="false"
-              :domain-line="false"
-              :grid-line="false"
-              :tick-format="(v: number) => rows[Math.round(v)]?.label ?? ''"
-              :tick-text-adaptive-sets="true"
-              :tick-text-hide-overlapping="true"
               tick-text-color="var(--muted-foreground)"
             />
             <ChartTooltip />

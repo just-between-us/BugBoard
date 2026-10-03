@@ -103,7 +103,7 @@ const barColor = computed(() => mixHex(REPORTS_PROGRESS_MIN, REPORTS_PROGRESS_MA
 
     <Progress
       :model-value="percent"
-      class="bg-muted [&_[data-slot=progress-indicator]]:bg-[var(--progress-fill)]"
+      class="bg-muted **:data-[slot=progress-indicator]:bg-(--progress-fill)"
       :style="{ '--progress-fill': barColor }"
     />
 
