@@ -191,12 +191,12 @@ function openBug() {
       <div>
         <RouterLink
           :to="reportRoute()"
-          class="block break-words font-medium hover:underline underline-offset-4"
+          class="block wrap-break-word font-medium hover:underline underline-offset-4"
           @click.stop
         >
           {{ props.report.title }}
         </RouterLink>
-        <p class="mt-1 break-words text-sm whitespace-pre-line text-muted-foreground">
+        <p class="mt-1 wrap-break-word text-sm whitespace-pre-line text-muted-foreground">
           {{ props.report.description }}
         </p>
       </div>
@@ -272,7 +272,7 @@ function openBug() {
           Ответ {{ props.replyAuthorName }}
           <span v-if="props.report.replied_at">· {{ formatDate(props.report.replied_at) }}</span>
         </p>
-        <p class="mt-1.5 break-words text-sm whitespace-pre-line">
+        <p class="mt-1.5 wrap-break-word text-sm whitespace-pre-line">
           {{ props.report.reply }}
         </p>
         <div v-if="props.isMember" class="mt-2 flex flex-wrap gap-1">
