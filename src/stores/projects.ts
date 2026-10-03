@@ -553,6 +553,30 @@ export const useProjectsStore = defineStore('projects', () => {
     return (data ?? []) as unknown as BugWithProject[]
   }
 
+  async function fetchCommentDatesByAuthor(authorId: string): Promise<string[]> {
+    const { data, error: fetchError } = await supabase
+      .from('bug_comments')
+      .select('created_at')
+      .eq('author_id', authorId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: true })
+
+    if (fetchError) throw fetchError
+    return (data ?? []).map((row) => row.created_at as string)
+  }
+
+  async function fetchReportDatesByReporter(reporterId: string): Promise<string[]> {
+    const { data, error: fetchError } = await supabase
+      .from('reports')
+      .select('created_at')
+      .eq('reporter_id', reporterId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: true })
+
+    if (fetchError) throw fetchError
+    return (data ?? []).map((row) => row.created_at as string)
+  }
+
   function clearCurrentBug() {
     currentBug.value = null
     comments.value = []
@@ -719,6 +743,8 @@ export const useProjectsStore = defineStore('projects', () => {
     clearProfiles,
     fetchProfileById,
     fetchBugsByAuthor,
+    fetchCommentDatesByAuthor,
+    fetchReportDatesByReporter,
     createProject,
     uploadProjectAvatar,
     createBug,

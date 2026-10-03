@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { Bug, AlertTriangle, Users, Settings } from '@lucide/vue'
+import { Bug, AlertTriangle, Users, Settings, ChartColumn } from '@lucide/vue'
 import { useProjectsStore } from '@/stores/projects'
 import { Badge } from '@/components/ui/badge'
 
-type TabId = 'bugs' | 'reports' | 'members' | 'settings'
+type TabId = 'bugs' | 'reports' | 'members' | 'stats' | 'settings'
 
 interface Props {
   activeTab: TabId
@@ -18,6 +18,7 @@ const tabs = [
   { id: 'bugs', label: 'Баги', icon: Bug },
   { id: 'reports', label: 'Репорты', icon: AlertTriangle },
   { id: 'members', label: 'Участники', icon: Users },
+  { id: 'stats', label: 'Статистика', icon: ChartColumn },
   { id: 'settings', label: 'Настройки', icon: Settings },
 ] as const
 

@@ -16,9 +16,11 @@
     "deploy": "npm run build && node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\" && gh-pages -d dist --dotfiles --nojekyll -m \"deploy\""
   },
   "dependencies": {
-    "@lucide/vue": "^1.48.0",
+    "@lucide/vue": "^1.51.0",
     "@supabase/supabase-js": "^2.117.2",
     "@tailwindcss/vite": "^4.3.3",
+    "@unovis/ts": "^1.7.1",
+    "@unovis/vue": "^1.7.1",
     "@vueuse/core": "^15.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

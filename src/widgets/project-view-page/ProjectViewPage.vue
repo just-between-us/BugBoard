@@ -10,6 +10,7 @@ import BugsFilters from '@/widgets/bugs-filters/BugsFilters.vue'
 import BugList from '@/widgets/bug-list/BugList.vue'
 import ProjectMembers from '@/widgets/project-members/ProjectMembers.vue'
 import ProjectReports from '@/widgets/project-reports/ProjectReports.vue'
+import ProjectStats from '@/widgets/project-stats/ProjectStats.vue'
 import CreateBugDialog from '@/widgets/create-bug-dialog/CreateBugDialog.vue'
 
 const route = useRoute()
@@ -18,7 +19,7 @@ const projectsStore = useProjectsStore()
 
 const projectId = computed<string>(() => route.params.id as string)
 
-const activeTab = ref<'bugs' | 'reports' | 'members' | 'settings'>('bugs')
+const activeTab = ref<'bugs' | 'reports' | 'members' | 'stats' | 'settings'>('bugs')
 const isCreateBugOpen = ref(false)
 const isMember = ref(false)
 
@@ -226,6 +227,9 @@ watch(
           :project-id="projectId"
           :is-member="isMember"
         />
+
+        <!-- Stats (только для участников: вкладки рендерятся только в их ветке) -->
+        <ProjectStats v-else-if="activeTab === 'stats'" :project-id="projectId" />
 
         <div v-else-if="activeTab === 'settings'" class="text-center py-12">
           <Settings class="mx-auto h-12 w-12 text-muted-foreground/50" />

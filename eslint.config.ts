@@ -22,12 +22,12 @@ export default defineConfigWithVueTs(
 
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
 
-  // Имена компонентов shadcn/ui совпадают с именами HTML-тегов (Button, Card…)
   {
-    name: 'shadcn-ui/allow-single-word-names',
-    files: ['src/components/ui/**/*.vue'],
+    name: 'shadcn-ui/relaxed-rules',
+    files: ['src/components/ui/**/*.{vue,ts}'],
     rules: {
       'vue/multi-word-component-names': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 

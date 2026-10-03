@@ -134,7 +134,7 @@ watch(userId, load, { immediate: true })
     <!-- Ready -->
     <template v-else-if="profile">
       <Card class="gap-4 max-sm:border-0 max-sm:bg-transparent max-sm:py-0 max-sm:shadow-none">
-        <CardContent class="flex flex-wrap items-center gap-4 max-sm:px-0">
+        <CardContent class="flex flex-col md:flex-row flex-wrap items-center gap-4 max-sm:px-0">
           <Avatar
             class="h-16 w-16 text-xl"
             :name="profile.display_name"
