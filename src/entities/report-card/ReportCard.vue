@@ -106,6 +106,7 @@ function openBug() {
               <CopyButton
                 class="shrink-0"
                 :text="props.report.id"
+                :compact="true"
                 label="Копировать ID репорта"
                 feedback="ID скопирован"
                 icon-class="h-3 w-3"

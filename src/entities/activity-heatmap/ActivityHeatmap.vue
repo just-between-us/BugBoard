@@ -96,7 +96,7 @@ onBeforeUnmount(() => {
           <div v-for="(label, ci) in monthLabels" :key="ci" class="relative h-3.5 w-3.5">
             <span
               v-if="label"
-              class="absolute top-0 left-0 whitespace-nowrap text-[10px] leading-none text-muted-foreground"
+              class="hidden sm:flex absolute top-0 left-0 whitespace-nowrap text-[10px] leading-none text-muted-foreground"
             >
               {{ label }}
             </span>

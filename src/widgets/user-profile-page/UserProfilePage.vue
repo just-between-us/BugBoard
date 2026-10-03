@@ -268,7 +268,7 @@ watch(userId, load, { immediate: true })
       <section class="mt-6">
         <div class="flex items-center justify-between gap-3">
           <h2 class="flex items-center gap-2 text-lg font-medium">
-            <Bug class="h-5 w-5 text-muted-foreground" />
+            <Bug class="hidden sm:flex h-5 w-5 text-muted-foreground" />
             Созданные баги
           </h2>
           <Badge v-if="!bugsLoading && !bugsError" variant="secondary">

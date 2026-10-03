@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 interface Props {
   searchQuery: string
@@ -107,19 +107,17 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
         <h2 class="text-lg font-medium">Все обнаруженные ошибки</h2>
         <p class="text-sm text-muted-foreground">Список багов и задач</p>
       </div>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button @click="emit('open-create-bug')">
-              <Plus class="h-4 w-4 mr-2" />
-              Создать баг
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top" align="center">
-            <p>Добавить новый баг в проект</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button @click="emit('open-create-bug')">
+            <Plus class="h-4 w-4 mr-2" />
+            Создать баг
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="center">
+          <p>Добавить новый баг в проект</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
     <Button class="flex sm:hidden mb-3 w-full" @click="emit('open-create-bug')">
       <Plus class="h-4 w-4 mr-2" />

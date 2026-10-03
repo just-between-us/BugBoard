@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Bug, FileText, MessageSquare } from '@lucide/vue'
 import type { BugComment, BugWithProject, Report } from '@/stores/projects'
 import { formatDate } from '@/lib/format'
@@ -47,6 +47,35 @@ const items = computed<FeedItem[]>(() => {
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, props.limit)
 })
+
+const scroller = ref<HTMLElement | null>(null)
+const scrolledStart = ref(false)
+const scrolledEnd = ref(false)
+
+function updateEdges() {
+  const el = scroller.value
+  if (!el) {
+    scrolledStart.value = false
+    scrolledEnd.value = false
+    return
+  }
+  scrolledStart.value = el.scrollTop > 0
+  scrolledEnd.value = el.scrollTop + el.clientHeight < el.scrollHeight - 1
+}
+
+watch(items, async () => {
+  await nextTick()
+  updateEdges()
+})
+
+onMounted(() => {
+  updateEdges()
+  window.addEventListener('resize', updateEdges)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateEdges)
+})
 </script>
 
 <template>
@@ -60,7 +89,13 @@ const items = computed<FeedItem[]>(() => {
       Действий пока нет
     </div>
 
-    <ul v-else class="feed-scroll max-h-28 space-y-2.5 overflow-y-auto">
+    <ul
+      v-else
+      ref="scroller"
+      class="feed-scroll max-h-35 sm:max-h-28 space-y-2.5 overflow-y-auto"
+      :class="{ 'is-scrolled-start': scrolledStart, 'is-scrolled-end': scrolledEnd }"
+      @scroll.passive="updateEdges"
+    >
       <li v-for="item in items" :key="item.id" class="flex gap-2.5 items-center">
         <component
           :is="kindIcon[item.kind]"
@@ -83,6 +118,33 @@ const items = computed<FeedItem[]>(() => {
 
   .feed-scroll::-webkit-scrollbar {
     display: none;
+  }
+
+  .feed-scroll.is-scrolled-start {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 16px);
+    mask-image: linear-gradient(to bottom, transparent, black 16px);
+  }
+
+  .feed-scroll.is-scrolled-end {
+    -webkit-mask-image: linear-gradient(to top, transparent, black 16px);
+    mask-image: linear-gradient(to top, transparent, black 16px);
+  }
+
+  .feed-scroll.is-scrolled-start.is-scrolled-end {
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      black 16px,
+      black calc(100% - 16px),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      black 16px,
+      black calc(100% - 16px),
+      transparent
+    );
   }
 }
 

@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { Avatar } from '@/components/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 interface Props {
   project: Project
@@ -47,25 +47,23 @@ function formatDate(dateString: string) {
                 <CardTitle class="min-w-0 truncate text-base font-medium">
                   {{ props.project.name }}
                 </CardTitle>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        class="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
-                      >
-                        <Globe v-if="props.project.is_public" class="h-3.5 w-3.5" />
-                        <Lock v-else class="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" align="center">
-                      <p>
-                        {{ props.project.is_public ? 'Публичный проект' : 'Приватный проект' }}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+                    >
+                      <Globe v-if="props.project.is_public" class="h-3.5 w-3.5" />
+                      <Lock v-else class="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center">
+                    <p>
+                      {{ props.project.is_public ? 'Публичный проект' : 'Приватный проект' }}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <CardDescription v-if="props.project.description" class="mt-1 line-clamp-2">
                 {{ props.project.description }}

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/avatar'
 import { CopyButton } from '@/components/copy-button'
 import { toUserError } from '@/lib/format'
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 interface Props {
   isMember: boolean
@@ -101,22 +101,20 @@ async function handleAvatarFile(event: Event) {
           <div class="min-w-0">
             <h1 class="text-2xl flex items-center gap-4 font-semibold tracking-tight truncate">
               {{ projectsStore.currentProject.name }}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Globe v-if="projectsStore.currentProject.is_public" class="h-3.5 w-3.5 mt-1" />
-                    <Lock v-else class="h-3.5 w-3.5 mt-1" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="center">
-                    <p>
-                      {{
-                        (projectsStore.currentProject.is_public ? 'Публичный' : 'Приватный') +
-                        (props.isMember ? ', можно изменить в настройках' : '')
-                      }}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Globe v-if="projectsStore.currentProject.is_public" class="h-3.5 w-3.5 mt-1" />
+                  <Lock v-else class="h-3.5 w-3.5 mt-1" />
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center">
+                  <p>
+                    {{
+                      (projectsStore.currentProject.is_public ? 'Публичный' : 'Приватный') +
+                      (props.isMember ? ', можно изменить в настройках' : '')
+                    }}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </h1>
             <p
               v-if="projectsStore.currentProject.description"
@@ -139,35 +137,33 @@ async function handleAvatarFile(event: Event) {
       </div>
 
       <div class="flex flex-col items-start gap-2 sm:ml-auto sm:flex-row sm:items-center">
-        <TooltipProvider>
-          <Tooltip>
-            <div v-if="projectsStore.currentProject.is_public" class="flex items-center gap-1">
-              <TooltipTrigger as-child>
-                <Button variant="outline" size="sm" class="gap-1" as-child>
-                  <a :href="reportUrl" target="_blank" rel="noopener">
-                    <Send class="h-3.5 w-3.5" />
-                    Ссылка для репортёров
-                  </a>
-                </Button>
-              </TooltipTrigger>
-              <CopyButton
-                :text="reportUrl"
-                label="Копировать ссылку для репортёров"
-                feedback="Ссылка скопирована"
-                icon-class="h-3.5 w-3.5 ml-2"
-              />
-            </div>
-            <TooltipContent side="top" align="center">
-              <p>
-                {{
-                  projectsStore.currentProject.is_public
-                    ? 'Принимает репорты по ссылке'
-                    : 'Только для участников'
-                }}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <div v-if="projectsStore.currentProject.is_public" class="flex items-center gap-1">
+            <TooltipTrigger as-child>
+              <Button variant="outline" size="sm" class="gap-1" as-child>
+                <a :href="reportUrl" target="_blank" rel="noopener">
+                  <Send class="h-3.5 w-3.5" />
+                  Ссылка для репортёров
+                </a>
+              </Button>
+            </TooltipTrigger>
+            <CopyButton
+              :text="reportUrl"
+              label="Копировать ссылку для репортёров"
+              feedback="Ссылка скопирована"
+              icon-class="h-3.5 w-3.5 ml-2"
+            />
+          </div>
+          <TooltipContent side="top" align="center">
+            <p>
+              {{
+                projectsStore.currentProject.is_public
+                  ? 'Принимает репорты по ссылке'
+                  : 'Только для участников'
+              }}
+            </p>
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   </div>

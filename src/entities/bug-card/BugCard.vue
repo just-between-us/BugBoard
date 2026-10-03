@@ -18,8 +18,8 @@ import {
 import type { Bug } from '@/stores/projects'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { CopyButton } from '@/components/copy-button'
 import {
   DropdownMenu,
@@ -133,18 +133,21 @@ function isNewBug(createdAt: string) {
 </script>
 
 <template>
-  <Card class="cursor-pointer overflow-hidden transition-shadow hover:shadow-md" @click="goToBug">
-    <CardContent>
-      <div class="flex items-start gap-3">
+  <Card
+    class="cursor-pointer gap-0 overflow-hidden transition-shadow hover:shadow-md"
+    @click="goToBug"
+  >
+    <CardContent class="pb-4">
+      <div class="flex items-start gap-3 max-sm:flex-wrap max-sm:justify-between max-sm:gap-y-2">
         <div
-          class="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center"
+          class="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center max-sm:order-2"
           :class="getSeverityDot(props.bug.severity)"
         >
           <component :is="getAreaIcon(props.bug.area)" class="h-4 w-4 text-white" />
         </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-start justify-between gap-4 pb-4">
-            <div class="flex-1 min-w-0">
+        <div class="flex-1 min-w-0 max-sm:contents">
+          <div class="flex items-start justify-between gap-4 pb-4 max-sm:contents">
+            <div class="flex-1 min-w-0 max-sm:order-3 max-sm:flex-none max-sm:w-full">
               <div class="flex items-center gap-2">
                 <h4 class="font-medium truncate">
                   <RouterLink
@@ -171,7 +174,7 @@ function isNewBug(createdAt: string) {
             </div>
             <Badge
               :class="getStatusBadge(props.bug.status)"
-              class="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs"
+              class="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs max-sm:order-1"
             >
               <component
                 :is="getStatusIcon(props.bug.status)"
@@ -184,57 +187,53 @@ function isNewBug(createdAt: string) {
               {{ getStatusLabel(props.bug.status) }}
             </Badge>
           </div>
-          <div class="mt-2 flex flex-col gap-2 text-xs text-muted-foreground">
-            <div class="flex min-w-0 items-center gap-1">
-              <span class="min-w-0 truncate font-mono">{{ props.bug.id }}</span>
-              <CopyButton :text="props.bug.id" label="Копировать ID" class="shrink-0" />
-            </div>
-            <div class="flex items-start justify-between gap-2">
-              <span
-                class="flex min-w-0 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
-              >
-                <span>Создан: {{ formatDate(props.bug.created_at) }}</span>
-                <span v-if="props.projectName" class="truncate"
-                  >Проект: {{ props.projectName }}</span
-                >
-                <span class="font-medium text-foreground">{{ getAreaLabel(props.bug.area) }}</span>
-              </span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger as-child>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          class="h-6 w-6 shrink-0 self-start text-muted-foreground hover:text-foreground p-1"
-                        >
-                          <MoreHorizontal class="h-3.5 w-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="center" class="w-48">
-                        <DropdownMenuItem class="w-full">
-                          <Edit class="h-4 w-4 mr-2" />
-                          Редактировать
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem class="text-severity-critical w-full">
-                          <Trash2 class="h-4 w-4 mr-2" />
-                          Удалить
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="center">
-                    <p>Действия с багом</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
         </div>
       </div>
     </CardContent>
+    <CardFooter
+      class="flex-col items-stretch gap-2 border-t [.border-t]:pt-4 text-xs text-muted-foreground"
+    >
+      <div class="flex min-w-0 items-center gap-1">
+        <span class="min-w-0 truncate font-mono">{{ props.bug.id }}</span>
+        <CopyButton :text="props.bug.id" :compact="true" label="Копировать ID" class="shrink-0" />
+      </div>
+      <div class="flex items-start justify-between gap-2">
+        <span class="flex min-w-0 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          <span>Создан: {{ formatDate(props.bug.created_at) }}</span>
+          <span v-if="props.projectName" class="truncate">Проект: {{ props.projectName }}</span>
+          <span class="font-medium text-foreground">{{ getAreaLabel(props.bug.area) }}</span>
+        </span>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="h-6 w-6 shrink-0 self-start text-muted-foreground hover:text-foreground p-1"
+                >
+                  <MoreHorizontal class="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" class="w-48">
+                <DropdownMenuItem class="w-full">
+                  <Edit class="h-4 w-4 mr-2" />
+                  Редактировать
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem class="text-severity-critical w-full">
+                  <Trash2 class="h-4 w-4 mr-2" />
+                  Удалить
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="center">
+            <p>Действия с багом</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </CardFooter>
   </Card>
 </template>
 

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import {
   Dialog,
   DialogContent,
@@ -100,19 +100,17 @@ onMounted(() => {
         <p class="mt-1 text-sm text-muted-foreground">Управляйте проектами и приглашайте команду</p>
       </div>
 
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button @click="openDialog">
-              <Plus class="h-4 w-4" />
-              <span>Создать проект</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left" align="center">
-            <p>Создать новый проект</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button @click="openDialog">
+            <Plus class="h-4 w-4" />
+            <span>Создать проект</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left" align="center">
+          <p>Создать новый проект</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
 
     <!-- Error State -->
@@ -172,19 +170,17 @@ onMounted(() => {
         пользователей.
       </p>
       <div class="mt-6 flex items-center justify-center gap-3">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button @click="openDialog" size="lg">
-                <Plus class="h-4 w-4 mr-2" />
-                Создать первый проект
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top" align="center">
-              <p>Создать новый проект</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button @click="openDialog" size="lg">
+              <Plus class="h-4 w-4 mr-2" />
+              Создать первый проект
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="center">
+            <p>Создать новый проект</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
 
