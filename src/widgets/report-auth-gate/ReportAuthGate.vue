@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { Loader2, Send } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { toUserError } from '@/lib/format'
@@ -8,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+const route = useRoute()
 const auth = useAuthStore()
 
 const email = ref('')
@@ -30,7 +32,7 @@ async function sendCode() {
 
   authLoading.value = true
   try {
-    await auth.sendOtp(email.value.trim())
+    await auth.sendOtp(email.value.trim(), route.fullPath)
     authStep.value = 'code'
   } catch (e) {
     authError.value = toUserError(e)
@@ -60,7 +62,7 @@ async function verifyCode() {
 async function resendCode() {
   authError.value = ''
   try {
-    await auth.sendOtp(email.value.trim())
+    await auth.sendOtp(email.value.trim(), route.fullPath)
   } catch (e) {
     authError.value = toUserError(e)
   }
@@ -122,6 +124,10 @@ function backToEmail() {
             autofocus
           />
         </div>
+
+        <p class="text-sm text-muted-foreground">
+          Введите код из письма или перейдите по ссылке в нём
+        </p>
 
         <p v-if="authError" class="text-sm text-severity-critical">{{ authError }}</p>
 

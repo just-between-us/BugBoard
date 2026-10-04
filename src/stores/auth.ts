@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
+import { authRedirectUrl } from '@/lib/authRedirect'
 import { avatarExtension, validateAvatarFile, withCacheBust } from '@/lib/avatar'
 import { useProjectsStore } from './projects'
 
@@ -15,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   const session = ref<Session | null>(null)
   const profile = ref<Profile | null>(null)
   const loading = ref(true)
+  const passwordRecovery = ref(false)
 
   const user = computed<User | null>(() => session.value?.user ?? null)
   const isAuthenticated = computed(() => !!session.value)
@@ -66,12 +68,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function init() {
-    const { data } = await supabase.auth.getSession()
-    session.value = data.session
-    await fetchProfile()
-    loading.value = false
+    // Подписка до getSession(): PASSWORD_RECOVERY приходит во время инициализации
+    // клиента (setTimeout после разбора URL) и теряется, если подписаться позже
+    supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (event === 'PASSWORD_RECOVERY') passwordRecovery.value = true
 
-    supabase.auth.onAuthStateChange(async (_event, newSession) => {
       session.value = newSession
       await fetchProfile()
 
@@ -82,13 +83,21 @@ export const useAuthStore = defineStore('auth', () => {
         projectsStore.projects = []
       }
     })
+
+    const { data } = await supabase.auth.getSession()
+    session.value = data.session
+    await fetchProfile()
+    loading.value = false
   }
 
-  async function signUp(email: string, password: string, displayName: string) {
+  async function signUp(email: string, password: string, displayName: string, redirect?: string) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        data: { display_name: displayName },
+        emailRedirectTo: authRedirectUrl('auth/callback', redirect),
+      },
     })
     if (error) throw error
   }
@@ -103,8 +112,26 @@ export const useAuthStore = defineStore('auth', () => {
     await projectsStore.fetchProjects()
   }
 
-  async function sendOtp(email: string) {
-    const { error } = await supabase.auth.signInWithOtp({ email })
+  async function sendOtp(email: string, redirect?: string) {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: authRedirectUrl('auth/callback', redirect) },
+    })
+    if (error) throw error
+  }
+
+  async function resetPassword(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: authRedirectUrl('auth/reset-password'),
+    })
+    if (error) throw error
+  }
+
+  async function changeEmail(email: string) {
+    const { error } = await supabase.auth.updateUser(
+      { email },
+      { emailRedirectTo: authRedirectUrl('auth/callback', '/app/settings') },
+    )
     if (error) throw error
   }
 
@@ -140,12 +167,15 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isAuthenticated,
     loading,
+    passwordRecovery,
     init,
     fetchProfile,
     uploadAvatar,
     signUp,
     verifySignup,
     sendOtp,
+    resetPassword,
+    changeEmail,
     verifyEmailOtp,
     signIn,
     signOut,

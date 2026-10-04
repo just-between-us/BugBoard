@@ -16,6 +16,16 @@ const router = createRouter({
       component: () => import('@/views/AuthView.vue'),
     },
     {
+      path: '/auth/callback',
+      name: 'auth-callback',
+      component: () => import('@/views/AuthCallbackView.vue'),
+    },
+    {
+      path: '/auth/reset-password',
+      name: 'auth-reset-password',
+      component: () => import('@/views/ResetPasswordView.vue'),
+    },
+    {
       path: '/report/:projectId',
       name: 'report',
       component: () => import('@/views/ReportView.vue'),

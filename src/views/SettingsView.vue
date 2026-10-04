@@ -25,6 +25,37 @@ const avatarError = ref('')
 
 const avatarName = computed(() => auth.profile?.display_name ?? auth.user?.email ?? '?')
 
+const newEmail = ref('')
+const emailSending = ref(false)
+const emailSent = ref(false)
+const emailError = ref('')
+
+async function handleEmailChange() {
+  emailError.value = ''
+  emailSent.value = false
+
+  const target = newEmail.value.trim()
+  if (!target) {
+    emailError.value = 'Введите новую почту'
+    return
+  }
+  if (target === auth.user?.email) {
+    emailError.value = 'Эта почта уже используется'
+    return
+  }
+
+  emailSending.value = true
+  try {
+    await auth.changeEmail(target)
+    emailSent.value = true
+    newEmail.value = ''
+  } catch (e) {
+    emailError.value = toUserError(e)
+  } finally {
+    emailSending.value = false
+  }
+}
+
 async function handleSave() {
   if (!auth.user) return
   saving.value = true
@@ -118,6 +149,31 @@ async function handleAvatarChange(event: Event) {
         </div>
         <p v-if="error" class="text-sm text-severity-critical">{{ error }}</p>
         <p v-if="saved" class="text-sm text-muted-foreground">Сохранено</p>
+      </CardContent>
+    </Card>
+
+    <Card class="mt-6">
+      <CardHeader>
+        <CardTitle class="text-base">Почта</CardTitle>
+        <CardDescription>Подтверждение придёт письмом на новый адрес</CardDescription>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <div class="flex space-x-1.5">
+          <Input
+            id="new-email"
+            v-model="newEmail"
+            type="email"
+            placeholder="new@example.com"
+            autocomplete="email"
+          />
+          <Button :disabled="emailSending" @click="handleEmailChange">
+            {{ emailSending ? 'Отправляем…' : 'Сменить' }}
+          </Button>
+        </div>
+        <p v-if="emailError" class="text-sm text-severity-critical">{{ emailError }}</p>
+        <p v-if="emailSent" class="text-sm text-muted-foreground">
+          Отправили письмо с подтверждением — перейдите по ссылке в нём
+        </p>
       </CardContent>
     </Card>
 

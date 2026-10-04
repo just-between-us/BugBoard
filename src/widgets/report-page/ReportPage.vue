@@ -77,7 +77,7 @@ async function handleSubmit() {
       return
     }
 
-    await auth.sendOtp(email.value.trim())
+    await auth.sendOtp(email.value.trim(), route.fullPath)
     otpUsed.value = true
     step.value = 'otp'
   } catch (e) {
@@ -128,7 +128,7 @@ async function submitReport() {
 async function resendCode() {
   error.value = ''
   try {
-    await auth.sendOtp(email.value.trim())
+    await auth.sendOtp(email.value.trim(), route.fullPath)
   } catch (e) {
     error.value = toUserError(e)
   }

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { supabase } from '@/lib/supabaseClient'
+import { authRedirectUrl } from '@/lib/authRedirect'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,6 +23,8 @@ const otpCode = ref('')
 
 const loading = ref(false)
 const error = ref('')
+const notice = ref('')
+const sendingReset = ref(false)
 
 const redirectTo = computed(() =>
   typeof route.query.redirect === 'string' ? route.query.redirect : '/app',
@@ -31,10 +34,12 @@ function switchMode(next: 'signin' | 'signup') {
   mode.value = next
   step.value = 'form'
   error.value = ''
+  notice.value = ''
 }
 
 async function handleSignIn() {
   error.value = ''
+  notice.value = ''
   loading.value = true
   try {
     await auth.signIn(email.value, password.value)
@@ -46,11 +51,33 @@ async function handleSignIn() {
   }
 }
 
+async function handleForgotPassword() {
+  error.value = ''
+  notice.value = ''
+
+  const target = email.value.trim()
+  if (!target) {
+    error.value = 'Введите почту, чтобы восстановить пароль'
+    return
+  }
+
+  sendingReset.value = true
+  try {
+    await auth.resetPassword(target)
+    notice.value = `Отправили ссылку для сброса пароля на ${target}`
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Не получилось отправить письмо'
+  } finally {
+    sendingReset.value = false
+  }
+}
+
 async function handleSignUp() {
   error.value = ''
+  notice.value = ''
   loading.value = true
   try {
-    await auth.signUp(email.value, password.value, displayName.value)
+    await auth.signUp(email.value, password.value, displayName.value, redirectTo.value)
     step.value = 'otp'
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Не получилось зарегистрироваться'
@@ -74,7 +101,11 @@ async function handleVerify() {
 
 async function resendCode() {
   error.value = ''
-  const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: email.value })
+  const { error: resendError } = await supabase.auth.resend({
+    type: 'signup',
+    email: email.value,
+    options: { emailRedirectTo: authRedirectUrl('auth/callback', redirectTo.value) },
+  })
   if (resendError) error.value = resendError.message
 }
 </script>
@@ -144,6 +175,17 @@ async function resendCode() {
               autocomplete="current-password"
             />
           </div>
+          <div class="flex justify-end">
+            <button
+              type="button"
+              class="text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground disabled:opacity-50"
+              :disabled="sendingReset"
+              @click="handleForgotPassword"
+            >
+              {{ sendingReset ? 'Отправляем…' : 'Забыли пароль?' }}
+            </button>
+          </div>
+          <p v-if="notice" class="text-sm text-muted-foreground">{{ notice }}</p>
           <p v-if="error" class="text-sm text-severity-critical">{{ error }}</p>
           <Button type="submit" class="w-full" :disabled="loading">
             {{ loading ? 'Входим…' : 'Войти' }}
@@ -192,6 +234,9 @@ async function resendCode() {
               autocomplete="one-time-code"
             />
           </div>
+          <p class="text-sm text-muted-foreground">
+            Введите код из письма или перейдите по ссылке в нём
+          </p>
           <p v-if="error" class="text-sm text-severity-critical">{{ error }}</p>
           <Button type="submit" class="w-full" :disabled="loading">
             {{ loading ? 'Проверяем…' : 'Подтвердить' }}
