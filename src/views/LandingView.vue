@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import GlassOverlay from '@/widgets/landing-preview/GlassOverlay.vue'
 
 type Severity = 'critical' | 'major' | 'minor'
 
@@ -60,7 +61,7 @@ const steps = [
           </div>
         </div>
 
-        <div class="rounded-lg border border-border bg-card">
+        <div class="group relative overflow-hidden rounded-lg border border-border bg-card">
           <div class="flex items-center justify-between border-b border-border px-4 py-3">
             <span class="font-mono text-xs text-muted-foreground">auth-service / issues</span>
             <span class="font-mono text-xs text-muted-foreground"
@@ -89,6 +90,14 @@ const steps = [
               </div>
             </li>
           </ul>
+
+          <!-- проверка стеклянного эффекта: двигай курсором по карточке, кликни -->
+          <GlassOverlay />
+          <span
+            class="pointer-events-none absolute bottom-3 right-3 rounded-full border border-border bg-background/80 px-2.5 py-1 font-mono text-[11px] text-muted-foreground opacity-100 backdrop-blur transition-opacity duration-300 group-hover:opacity-0"
+          >
+            нажми
+          </span>
         </div>
       </section>
 

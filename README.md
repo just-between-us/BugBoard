@@ -18,7 +18,7 @@
 ### Публичная часть
 
 - **Landing page** — описание продукта, демо-лист тикетов, секция "Как это работает", разделение аудиторий (команда / репортёр)
-- **Аутентификация** — регистрация с подтверждением email (OTP), вход, сброс пароля (Supabase Auth)
+- **Аутентификация** — регистрация с подтверждением email (код из письма или ссылка в нём), вход по паролю и по магической ссылке, сброс пароля, смена почты из настроек (Supabase Auth); универсальный редирект-ловец `/auth/callback` и отдельный экран нового пароля `/auth/reset-password`
 - **Публичный репорт** — страница `/report/:projectId` для публичных проектов: форма (заголовок, описание, почта), OTP-код вводится вторым шагом прямо на ней — черновик не теряется, инсерт в `reports` сразу после `verifyOtp`. Приватный или несуществующий проект — «Проект недоступен», форма не показывается
 - **Просмотр репорта** — страница `/reports/:reportId` для всех: до входа только форма «почта → код» (RLS не отдаёт даже факт существования репорта), после входа — данные репорта, если RLS (`reports_select_team_or_owner`) вернул строку. Элементы управления показываются, только если `project_members` подтвердил членство в проекте репорта, включая блок «Привязка к багу» (только баги того же проекта)
 
@@ -34,7 +34,7 @@
 - **Страница бага** — inline-редактирование заголовка и описания, кнопка «Вернуть изменения», атрибуты (статус, важность, область, автор) с автосохранением; блок «Репорты» — привязанные и свободные репорты проекта с поиском и фильтром по статусу
 - **Комментарии** — создание, редактирование и удаление (только автор, soft delete), inline-подтверждение удаления
 - **Профиль пользователя** — публичная страница `/app/users/:userId`: имя, дата регистрации, созданные баги (только видимые вам), секция «Активность» (видна только на своём профиле: heatmap событий в стиле GitHub по багам/комментариям/репортам + лента последних действий); на чужом профиле — бейджи общих проектов с вами (пересечение `project_members`) и баги, видимые только из этих проектов
-- **Настройки** — изменение отображаемого имени, загрузка аватарки (JPG/PNG/WebP, ≤ 2 МБ), переключение темы (светлая/тёмная)
+- **Настройки** — изменение отображаемого имени, смена почты (письмо с подтверждением, редирект через тот же `/auth/callback`), загрузка аватарки (JPG/PNG/WebP, ≤ 2 МБ), переключение темы (светлая/тёмная)
 - **Header** — лого, переключатель темы, ссылки на вход/создание команды (на лендинге; в приватной части — топбар внутри `AppLayout`)
 
 ## Запуск
@@ -86,8 +86,8 @@ npm run deploy
 Что учесть:
 
 - **base path**: `base: '/BugBoard/'` задаётся только для `command === 'build'`, dev-сервер остаётся на `/`. При переименовании репозитория base надо поменять
-- **Supabase → Authentication → URL Configuration**: добавить `https://just-between-us.github.io` в Site URL и Redirect URLs — иначе подтверждение почты и OAuth будут редиректить на `localhost`
-- **Supabase → Authentication → Email Templates**: шаблон, который уходит на `signInWithOtp`, должен содержать `{{ .Token }}` (код из 6 цифр) — иначе в письме придёт только ссылка и `verifyOtp({ type: 'email' })` не пройдёт
+- **Supabase → Authentication → URL Configuration**: Redirect URLs настроены wildcard'ом — он должен покрывать `…/auth/callback` и `…/auth/reset-password` на обоих хостах (`https://just-between-us.github.io/BugBoard/*` для Pages и `http://localhost:5173/*` для dev); все auth-ссылки в письмах строятся через `authRedirectUrl()` (src/lib/authRedirect.ts) от `import.meta.env.BASE_URL`, поэтому путь подставляется сам
+- **Supabase → Authentication → Email Templates**: шаблоны должны содержать и `{{ .Token }}` (код из 6 цифр — нужен `verifyOtp({ type: 'email' })`), и `{{ .ConfirmationURL }}` (ссылка — ведёт на `/auth/callback` или `/auth/reset-password` и не теряет `#access_token=` / `?code=`: `404.html` — копия `index.html`, поэтому hash и query долетают до Vue-роутера нетронутыми)
 - **Ключи**: `VITE_SUPABASE_ANON_KEY` попадает в бандл — это нормально, он публичный по дизайну; RLS-политики от origin не зависают и работают одинаково локально и на Pages
 - публикуется только `dist`, рабочая ветка не переключается; `vite.config.ts` и `package.json` коммитятся в `main` отдельно
 
@@ -121,18 +121,21 @@ src/
 │   └── AppLayout.vue        # Оболочка приватных маршрутов (сайдбар + контент)
 ├── lib/
 │   ├── supabaseClient.ts    # Инициализация Supabase клиента
+│   ├── authRedirect.ts      # authRedirectUrl() — абсолютный URL auth-редиректа через BASE_URL (dev `/` и Pages `/BugBoard/`)
 │   ├── utils.ts             # cn() — утилита для классов (clsx + tailwind-merge)
 │   ├── format.ts            # formatDate(), formatDateOnly(), initials(), pluralRu(), toUserError()
 │   ├── avatar.ts            # validateAvatarFile(), avatarExtension(), withCacheBust()
 │   └── stats.ts             # bucketByDay() — бакеты дат по дням для heatmap
 ├── router/index.ts          # Маршруты (все view — ленивые), защита auth-маршрутов
 ├── stores/
-│   ├── auth.ts              # Pinia store: сессия, профиль, signIn/signUp/signOut, sendOtp/verifyEmailOtp, uploadAvatar
+│   ├── auth.ts              # Pinia store: сессия, профиль, signIn/signUp/signOut, sendOtp/verifyEmailOtp, resetPassword/changeEmail, uploadAvatar
 │   ├── projects.ts          # Pinia store: проекты, баги, комментарии, участники, профили, репорты, общие проекты
 │   └── theme.ts             # Pinia store: тема (light/dark), localStorage, начальное значение из prefers-color-scheme
 ├── views/                   # Маршрутизируемые экраны (часть — тонкие обёртки над page-виджетами)
 │   ├── LandingView.vue      # Публичная главная
-│   ├── AuthView.vue         # Вход / регистрация / OTP
+│   ├── AuthView.vue         # Вход / регистрация / OTP / сброс пароля по почте
+│   ├── AuthCallbackView.vue # Ловец auth-редиректов (/auth/callback): обмен ?code= или hash-токенов на сессию + redirect
+│   ├── ResetPasswordView.vue # Ввод нового пароля (только по событию PASSWORD_RECOVERY)
 │   ├── ReportView.vue       # Публичная страница репорта
 │   ├── ReportDetailView.vue # Просмотр конкретного репорта
 │   ├── ProjectsView.vue     # Список проектов + создание
@@ -507,6 +510,7 @@ create policy "project_avatars_delete_team"
 ## Особенности реализации
 
 - **Аутентификация** — email/password + OTP верификация при регистрации
+- **Auth-редиректы** — один механизм под тремя масками (магическая ссылка входа, подтверждение смены почты, подтверждение регистрации): Supabase шлёт письмо со ссылкой на `/auth/callback` (или `/auth/reset-password` для сброса), а `authRedirectUrl(path, redirect?)` поднимает абсолютный URL через `import.meta.env.BASE_URL` — работает и на `/` в dev, и на `/BugBoard/` на Pages. Ловец вне `/app`, без `requiresAuth`: для PKCE (`?code=`) делает `exchangeCodeForSession`, для дефолтного implicit (токены в `#hash`) делает `fetchProfile()` и уходит по `?redirect=` (иначе `/app`). Сброс пароля — отдельный роут: форма нового пароля открывается только по событию `PASSWORD_RECOVERY` (сессия по recovery-ссылке технически неотличима от обычной, а событие может прийти ещё до монтирования компонента — поэтому подписка в `init()` идёт до `getSession()`, а флаг читается из стора). Смена почты — чисто Auth-операция (`updateUser({ email })`), `profiles` не участвует; после подтверждения ловец возвращает в `/app/settings`
 - **Публичный репорт** — passwordless-аккаунт репортёра: `signInWithOtp` → код вводится вторым шагом той же формы → `verifyOtp({ type: 'email' })` → `insert` в `reports` сразу после, пока черновик в памяти. Редиректа на `/auth` нет, черновик (title/description) живёт в `ref` компонента. Аккаунт один и тот же: если репортёра позже добавят в команду, миграция данных не нужна — тот же `auth.uid()` просто появится в `project_members`
 - **Публичная страница репорта** — `is_public = false` показывается как «Проект недоступен» до отправки: RLS всё равно завернёт инсерт, но без бессмысленной попытки
 - **Ответ репортёру** — команда пишет ответ в репорт (`reply` + `reply_author_id` + `replied_at`); репортёр видит его на странице `/reports/:reportId`
@@ -526,3 +530,5 @@ create policy "project_avatars_delete_team"
 ## Дизайн
 
 Гайдлайны по проектированию и визуальному оформлению экранов — в [docs/design.md](docs/design.md).
+
+Идея для лендинга: блок «Превью» с разбивающимся стеклом (видео с багом шейдеров → фейковый терминал → форма репорта в seed-проект) — в [docs/landing-preview.md](docs/landing-preview.md).
