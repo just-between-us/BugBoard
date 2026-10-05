@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import AppHeader from '@/components/layout/AppHeader.vue'
-import GlassOverlay from '@/widgets/landing-preview/GlassOverlay.vue'
+import GlassShatterPrewiew from '@/widgets/landing-preview/GlassShatterPrewiew.vue'
+import previewBoard from '@/assets/preview-board.svg'
 
 type Severity = 'critical' | 'major' | 'minor'
 
@@ -90,14 +91,26 @@ const steps = [
               </div>
             </li>
           </ul>
+        </div>
+      </section>
 
-          <!-- проверка стеклянного эффекта: двигай курсором по карточке, кликни -->
-          <GlassOverlay />
-          <span
-            class="pointer-events-none absolute bottom-3 right-3 rounded-full border border-border bg-background/80 px-2.5 py-1 font-mono text-[11px] text-muted-foreground opacity-100 backdrop-blur transition-opacity duration-300 group-hover:opacity-0"
-          >
-            нажми
-          </span>
+      <!-- Preview -->
+      <section class="border-t border-border">
+        <div class="mx-auto max-w-6xl px-6 py-20">
+          <div class="flex flex-wrap items-end justify-between gap-4">
+            <div class="space-y-3">
+              <h2 class="text-2xl font-semibold tracking-tight">Как это выглядит</h2>
+              <p class="max-w-md text-sm text-muted-foreground">
+                Интерфейс BugBoard под стеклом: нажми, чтобы разбить, и двигай курсором — осколки
+                наклоняются следом за ним.
+              </p>
+            </div>
+            <span class="font-mono text-xs text-muted-foreground">нажми, чтобы разбить</span>
+          </div>
+
+          <div class="mt-8 overflow-hidden rounded-lg border border-border">
+            <GlassShatterPrewiew :image="previewBoard" :shard-count="40" />
+          </div>
         </div>
       </section>
 
