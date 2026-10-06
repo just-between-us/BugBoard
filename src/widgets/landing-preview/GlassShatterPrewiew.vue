@@ -11,8 +11,16 @@ interface Props {
   depth?: number
   /** Множитель силы разлёта от клика. */
   impulse?: number
+  /** Сила реакции на курсор: поворот, радиус, параллакс. */
+  cursorPower?: number
   showDirt?: boolean
   showCracks?: boolean
+  /** Множитель интенсивности грязи. */
+  dirtStrength?: number
+  /** Прозрачность линий трещин, 0..1. */
+  crackOpacity?: number
+  /** Цвет трещин: 0 — темнее, 1 — светлее. */
+  crackTone?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -20,8 +28,12 @@ const props = withDefaults(defineProps<Props>(), {
   shardGap: 18,
   depth: 30,
   impulse: 1,
+  cursorPower: 1,
   showDirt: true,
   showCracks: true,
+  dirtStrength: 1,
+  crackOpacity: 0.5,
+  crackTone: 0.5,
 })
 
 const container = ref<HTMLDivElement | null>(null)
@@ -65,6 +77,13 @@ const shatterOrigin = new THREE.Vector2(0, 0)
 const CRACK_DURATION = 0.6
 const CRACK_WAVE_SPEED = 2000
 
+/*
+ * Появление целого стекла: заполнение контейнера от краёв.
+ */
+
+const REVEAL_DURATION = 1.4
+let revealProgress = 0
+
 interface Shard {
   mesh: THREE.Mesh
   center: THREE.Vector2
@@ -93,6 +112,7 @@ const shards: Shard[] = []
  *  - edge highlight
  *  - dirt texture (smudges, dust)
  *  - crack lines
+ *  - edge reveal (glass appear)
  *  - moving specular highlight
  */
 
@@ -141,15 +161,86 @@ const fragmentShader = /* glsl */ `
   uniform float uShardSeed;
   uniform float uCrack;
   uniform float uDirtOn;
+  uniform float uReveal;
+  uniform float uDirtStrength;
+  uniform float uCrackOpacity;
+  uniform float uCrackTone;
 
   varying vec2 vUv;
   varying vec3 vNormal;
   varying vec3 vWorldPosition;
   varying vec3 vViewDirection;
 
+  /*
+   * Появление стекла: хаотичное заполнение контейнера
+   * от краёв к центру. Порог по краевому расстоянию,
+   * сбитый шумом — фронт рваный, не дуга.
+   */
+
+  float revealHash(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+
+    return fract(p.x * p.y);
+  }
+
+  float revealNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+
+    f = f * f * (3.0 - 2.0 * f);
+
+    return mix(
+      mix(revealHash(i), revealHash(i + vec2(1.0, 0.0)), f.x),
+      mix(revealHash(i + vec2(0.0, 1.0)), revealHash(i + vec2(1.0, 1.0)), f.x),
+      f.y
+    );
+  }
+
   void main() {
 
     vec3 normal = normalize(vNormal);
+
+    /*
+     * Экранные координаты (0..1, сверху-слева) —
+     * общие для reveal-маски и подсветки трещин у курсора.
+     */
+
+    vec2 screenUv =
+      vec2(
+        vWorldPosition.x / uResolution.x + 0.5,
+        0.5 - vWorldPosition.y / uResolution.y
+      );
+
+    /*
+     * Расстояние до ближайшего края контейнера: 0 на краю,
+     * 1 в центре (по меньшей из сторон).
+     */
+
+    float edgeDist = min(
+      min(screenUv.x, 1.0 - screenUv.x) * uResolution.x,
+      min(screenUv.y, 1.0 - screenUv.y) * uResolution.y
+    );
+
+    float edgeT =
+      clamp(edgeDist / (min(uResolution.x, uResolution.y) * 0.5), 0.0, 1.0);
+
+    float revealT =
+      edgeT * 0.7 +
+      revealNoise(screenUv * vec2(7.0, 4.0)) * 0.3;
+
+    if (uReveal < revealT) {
+      discard;
+    }
+
+    /*
+     * Светящийся фронт заполнения: полоса шириной 0.12
+     * позади текущего значения, гаснет к концу анимации.
+     */
+
+    float revealFront =
+      (1.0 - smoothstep(0.0, 0.12, uReveal - revealT)) *
+      (1.0 - smoothstep(0.88, 1.0, uReveal));
 
     /*
      * Ортокамера: направление взгляда постоянное (0,0,1).
@@ -373,7 +464,12 @@ const fragmentShader = /* glsl */ `
      * зато широкая засветка поднимается — матовый налёт.
      */
 
-    float dirt = texture2D(uDirt, vUv).r * uDirtOn;
+    float dirt =
+      clamp(
+        texture2D(uDirt, vUv).r * uDirtOn * uDirtStrength,
+        0.0,
+        1.0
+      );
 
     specular *= 1.0 - dirt * 0.85;
 
@@ -409,29 +505,42 @@ const fragmentShader = /* glsl */ `
     float crackLine =
       texture2D(uCrackTex, vUv).r * uCrack;
 
-    vec2 screenUv =
-      vec2(
-        vWorldPosition.x / uResolution.x + 0.5,
-        0.5 - vWorldPosition.y / uResolution.y
-      );
-
     float cursorDist = distance(screenUv, uMouse);
 
     float cursorGlow =
       1.0 +
       (1.0 - smoothstep(0.0, 0.3, cursorDist)) * 2.0;
 
+    /*
+     * Цвет трещин: от тёмного серо-синего (0)
+     * до почти белого (1), прозрачность — отдельным
+     * множителем.
+     */
+
+    vec3 crackColor =
+      mix(
+        vec3(0.1, 0.14, 0.2),
+        vec3(0.9, 0.95, 1.0),
+        uCrackTone
+      );
+
     color =
       1.0 -
       (1.0 - color) *
       (1.0 - clamp(
-        vec3(0.5, 0.6, 0.72) *
+        crackColor *
         crackLine *
-        0.3 *
+        uCrackOpacity *
         cursorGlow,
         0.0,
         1.0
       ));
+
+    /*
+     * Фронт появления стекла.
+     */
+
+    color += vec3(0.6, 0.78, 1.0) * revealFront * 0.6;
 
     /*
      * Свет — через screen-бленд: 1 - (1 - color) * (1 - glow).
@@ -1376,6 +1485,22 @@ function createShard(polygon: [number, number][], center: THREE.Vector2, baseSca
         value: props.showDirt ? 1 : 0,
       },
 
+      uReveal: {
+        value: 1,
+      },
+
+      uDirtStrength: {
+        value: props.dirtStrength,
+      },
+
+      uCrackOpacity: {
+        value: props.crackOpacity,
+      },
+
+      uCrackTone: {
+        value: props.crackTone,
+      },
+
       uResolution: {
         value: new THREE.Vector2(
           container.value?.clientWidth ?? 1,
@@ -1578,7 +1703,7 @@ function handlePointerDown(event: PointerEvent) {
     shard.rotationVelocity.x += dirY * kick
     shard.rotationVelocity.y += dirX * kick
 
-    const push = (0.8 + shard.random * 1.0) * props.impulse
+    const push = (4 + shard.random * 10) * props.impulse
 
     shard.positionVelocity.x += dirX * push
     shard.positionVelocity.y += dirY * push
@@ -1619,6 +1744,7 @@ watch(
 function restoreGlass() {
   shattered.value = false
   crackTime = 0
+  revealProgress = 0
   generateShards()
 }
 
@@ -1642,6 +1768,15 @@ function animate() {
   if (shattered.value) {
     crackTime += dt
   }
+
+  /*
+   * Заполнение стеклом (ease-out): после удара раскрываются
+   * сразу осколки — reveal уходит в единицу.
+   */
+
+  revealProgress = Math.min(revealProgress + dt / REVEAL_DURATION, 1)
+
+  const revealValue = 1 - Math.pow(1 - revealProgress, 2)
 
   /*
    * Smooth cursor.
@@ -1676,15 +1811,17 @@ function animate() {
 
     const distance = Math.sqrt(dx * dx + dy * dy)
 
-    const influence = shattered.value ? Math.max(0, 1.0 - distance * 1.8) : 0
+    const falloff = 1.8 / Math.max(props.cursorPower, 0.25)
+
+    const influence = shattered.value ? Math.max(0, 1.0 - distance * falloff) : 0
 
     /*
      * Target rotation.
      */
 
-    const targetX = dy * -0.2 * influence
+    const targetX = dy * -0.2 * influence * props.cursorPower
 
-    const targetY = dx * 0.19 * influence
+    const targetY = dx * 0.19 * influence * props.cursorPower
 
     shard.rotationTarget.set(targetX, targetY)
 
@@ -1721,10 +1858,11 @@ function animate() {
     /*
      * Базовый подъём = depth, наведение опускает на depth / 3 —
      * это сохраняет выверенные пропорции (30 / 10).
+     * Скорость опускания масштабируется cursorPower.
      */
 
     const zTarget = shattered.value
-      ? float + props.depth - influence * (props.depth / 3)
+      ? float + props.depth - influence * (props.depth / 3) * props.cursorPower
       : 0
 
     shard.zVelocity += (zTarget - mesh.position.z) * 0.07
@@ -1757,13 +1895,31 @@ function animate() {
 
       /*
        * Пружина к basePosition гасит импульс удара.
+       *
+       * Осколок, улетевший за пределы контейнера (+25px),
+       * отпускается: пружина больше его не тянет, наружная
+       * подталкивающая сила уносит его за край холста —
+       * фрагмент «выпал» из стекла и не возвращается.
        */
 
-      shard.positionVelocity.x += (shard.basePosition.x - mesh.position.x) * 0.03
+      const halfWidth = (container.value?.clientWidth ?? 0) / 2
+      const halfHeight = (container.value?.clientHeight ?? 0) / 2
 
-      shard.positionVelocity.y += (shard.basePosition.y - mesh.position.y) * 0.03
+      const escaped =
+        Math.abs(mesh.position.x) > halfWidth + 25 ||
+        Math.abs(mesh.position.y) > halfHeight + 25
 
-      shard.positionVelocity.multiplyScalar(0.85)
+      if (escaped) {
+        shard.positionVelocity.x += Math.sign(mesh.position.x) * 0.5
+        shard.positionVelocity.y += Math.sign(mesh.position.y) * 0.5
+
+        shard.positionVelocity.multiplyScalar(0.92)
+      } else {
+        shard.positionVelocity.x += (shard.basePosition.x - mesh.position.x) * 0.01
+        shard.positionVelocity.y += (shard.basePosition.y - mesh.position.y) * 0.01
+
+        shard.positionVelocity.multiplyScalar(0.92)
+      }
 
       mesh.position.x += shard.positionVelocity.x
 
@@ -1783,6 +1939,14 @@ function animate() {
     material.uniforms.uCrack!.value = crackAmount * (props.showCracks ? 1 : 0)
 
     material.uniforms.uDirtOn!.value = props.showDirt ? 1 : 0
+
+    material.uniforms.uDirtStrength!.value = props.dirtStrength
+
+    material.uniforms.uCrackOpacity!.value = props.crackOpacity
+
+    material.uniforms.uCrackTone!.value = props.crackTone
+
+    material.uniforms.uReveal!.value = shattered.value ? 1 : revealValue
   }
 
   renderer.render(scene, camera)
@@ -1997,7 +2161,7 @@ onBeforeUnmount(() => {
     transparent 70%
   );
   pointer-events: none;
-  animation: glass-flash 0.45s ease-out forwards;
+  animation: glass-flash 0.25s ease-out forwards;
 }
 @keyframes glass-flash {
   from {
