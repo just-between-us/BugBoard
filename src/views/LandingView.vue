@@ -1,5 +1,11 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { RotateCcw } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Slider } from '@/components/ui/slider'
+import { Switch } from '@/components/ui/switch'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import GlassShatterPrewiew from '@/widgets/landing-preview/GlassShatterPrewiew.vue'
 import previewBoard from '@/assets/preview-board.svg'
@@ -29,9 +35,26 @@ const steps = [
   },
   {
     title: 'Разбирайте баги вместе',
-    text: 'Статус, область и важность у каждого бага, обсуждение в комментариях, ответ на репорт — без переключения между инструментами.',
+    text: 'Статус, область и важность у каждого бага, обсуждение в комментариях, ответ на репорт — без переключений между инструментами.',
   },
 ]
+
+/*
+ * Крутилки эффекта «разбитое стекло».
+ */
+
+const preview = ref<InstanceType<typeof GlassShatterPrewiew> | null>(null)
+
+const shardCount = ref(18)
+const shardGap = ref(18)
+const depth = ref(30)
+const impulse = ref(1)
+const showDirt = ref(true)
+const showCracks = ref(true)
+
+function restoreGlass() {
+  preview.value?.restore()
+}
 </script>
 
 <template>
@@ -109,8 +132,113 @@ const steps = [
           </div>
 
           <div class="mt-8 overflow-hidden rounded-lg border border-border">
-            <GlassShatterPrewiew :image="previewBoard" :shard-count="40" />
+            <GlassShatterPrewiew
+              ref="preview"
+              :image="previewBoard"
+              :shard-count="shardCount"
+              :shard-gap="shardGap"
+              :depth="depth"
+              :impulse="impulse"
+              :show-dirt="showDirt"
+              :show-cracks="showCracks"
+            />
           </div>
+
+          <Card class="mt-4">
+            <CardHeader>
+              <CardTitle class="text-sm">Крутилки эффекта</CardTitle>
+              <CardDescription>Настройки стекла в реальном времени</CardDescription>
+            </CardHeader>
+
+            <CardContent class="grid gap-8 md:grid-cols-2">
+              <div class="space-y-5">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <Label for="glass-depth">Глубина</Label>
+                    <span class="font-mono text-xs text-muted-foreground">{{ depth }} px</span>
+                  </div>
+                  <Slider
+                    id="glass-depth"
+                    :model-value="[depth]"
+                    :min="0"
+                    :max="60"
+                    :step="1"
+                    @update:model-value="depth = $event?.[0] ?? depth"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <Label for="glass-impulse">Ширина разлёта</Label>
+                    <span class="font-mono text-xs text-muted-foreground"
+                      >×{{ impulse.toFixed(1) }}</span
+                    >
+                  </div>
+                  <Slider
+                    id="glass-impulse"
+                    :model-value="[impulse]"
+                    :min="0"
+                    :max="3"
+                    :step="0.1"
+                    @update:model-value="impulse = $event?.[0] ?? impulse"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <Label for="glass-gap">Зазор между осколками</Label>
+                    <span class="font-mono text-xs text-muted-foreground">{{ shardGap }} px</span>
+                  </div>
+                  <Slider
+                    id="glass-gap"
+                    :model-value="[shardGap]"
+                    :min="0"
+                    :max="36"
+                    :step="1"
+                    @update:model-value="shardGap = $event?.[0] ?? shardGap"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <Label for="glass-count">Осколков</Label>
+                    <span class="font-mono text-xs text-muted-foreground">{{ shardCount }}</span>
+                  </div>
+                  <Slider
+                    id="glass-count"
+                    :model-value="[shardCount]"
+                    :min="8"
+                    :max="60"
+                    :step="1"
+                    @update:model-value="shardCount = $event?.[0] ?? shardCount"
+                  />
+                </div>
+              </div>
+
+              <div class="space-y-5">
+                <div class="flex items-center justify-between gap-4">
+                  <div class="space-y-0.5">
+                    <Label for="glass-dirt">Грязь на стекле</Label>
+                    <p class="text-xs text-muted-foreground">Пятна, разводы и пыль</p>
+                  </div>
+                  <Switch id="glass-dirt" v-model="showDirt" />
+                </div>
+
+                <div class="flex items-center justify-between gap-4">
+                  <div class="space-y-0.5">
+                    <Label for="glass-cracks">Трещины</Label>
+                    <p class="text-xs text-muted-foreground">Серебристые линии по осколкам</p>
+                  </div>
+                  <Switch id="glass-cracks" v-model="showCracks" />
+                </div>
+
+                <Button variant="outline" class="w-full" @click="restoreGlass">
+                  <RotateCcw class="size-4" />
+                  Восстановить стекло
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 

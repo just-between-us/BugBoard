@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as THREE from 'three'
 import { Delaunay } from 'd3-delaunay'
 
@@ -7,11 +7,21 @@ interface Props {
   image: string
   shardCount?: number
   shardGap?: number
+  /** Базовый подъём осколков в глубину, px. */
+  depth?: number
+  /** Множитель силы разлёта от клика. */
+  impulse?: number
+  showDirt?: boolean
+  showCracks?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  shardCount: 30,
-  shardGap: 12,
+  shardCount: 18,
+  shardGap: 18,
+  depth: 30,
+  impulse: 1,
+  showDirt: true,
+  showCracks: true,
 })
 
 const container = ref<HTMLDivElement | null>(null)
@@ -28,11 +38,13 @@ const flash = ref({ x: 0, y: 0, key: 0 })
 
 let renderer: THREE.WebGLRenderer
 let scene: THREE.Scene
-let camera: THREE.OrthographicCamera
+let camera: THREE.PerspectiveCamera
 let animationFrame = 0
 
 let glassGroup: THREE.Group
 let previewTexture: THREE.Texture
+let dirtTexture: THREE.Texture
+let crackTexture: THREE.Texture
 
 let resizeObserver: ResizeObserver | undefined
 
@@ -60,6 +72,7 @@ interface Shard {
   rotationTarget: THREE.Vector2
   rotationVelocity: THREE.Vector2
   positionVelocity: THREE.Vector2
+  zVelocity: number
   random: number
   baseScale: number
   crackDelay: number
@@ -78,7 +91,8 @@ const shards: Shard[] = []
  *  - fake refraction
  *  - thickness tint
  *  - edge highlight
- *  - procedural micro distortion
+ *  - dirt texture (smudges, dust)
+ *  - crack lines
  *  - moving specular highlight
  */
 
@@ -114,6 +128,8 @@ const fragmentShader = /* glsl */ `
   precision highp float;
 
   uniform sampler2D uTexture;
+  uniform sampler2D uDirt;
+  uniform sampler2D uCrackTex;
 
   uniform vec2 uResolution;
   uniform vec2 uMouse;
@@ -123,40 +139,13 @@ const fragmentShader = /* glsl */ `
   uniform float uThickness;
   uniform float uDistortion;
   uniform float uShardSeed;
+  uniform float uCrack;
+  uniform float uDirtOn;
 
   varying vec2 vUv;
   varying vec3 vNormal;
   varying vec3 vWorldPosition;
   varying vec3 vViewDirection;
-
-  /*
-   * Simple hash/noise.
-   */
-
-  float hash21(vec2 p) {
-    p = fract(p * vec2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-
-    return fract(p.x * p.y);
-  }
-
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-
-    f = f * f * (3.0 - 2.0 * f);
-
-    float a = hash21(i);
-    float b = hash21(i + vec2(1.0, 0.0));
-    float c = hash21(i + vec2(0.0, 1.0));
-    float d = hash21(i + vec2(1.0, 1.0));
-
-    return mix(
-      mix(a, b, f.x),
-      mix(c, d, f.x),
-      f.y
-    );
-  }
 
   void main() {
 
@@ -185,40 +174,18 @@ const fragmentShader = /* glsl */ `
 
     /*
      * -----------------------------------------------------
-     * Procedural surface distortion
-     * -----------------------------------------------------
-     */
-
-    float n1 =
-      noise(
-        vUv * 8.0 +
-        vec2(uTime * 0.015)
-      );
-
-    float n2 =
-      noise(
-        vUv * 35.0 -
-        vec2(uTime * 0.02)
-      );
-
-    float surfaceNoise =
-      mix(n1, n2, 0.35);
-
-    /*
-     * -----------------------------------------------------
      * Fake refraction
      * -----------------------------------------------------
      *
-     * Реальная refraction для первого прототипа
-     * здесь заменена UV distortion.
-     *
-     * Позже это легко заменить на render target.
+     * Чистое стекло: UV сдвигаются только по нормали фаски.
+     * Раньше здесь был ещё и procedural noise (матовость),
+     * теперь его функции удалены — преломление кристально
+     * чистое, а «грязь» даёт отдельная dirt-текстура.
      */
 
     vec2 normalOffset =
       normal.xy *
-      uDistortion *
-      (0.35 + surfaceNoise * 0.65);
+      uDistortion;
 
     /*
      * IOR влияет на силу искажения.
@@ -395,6 +362,78 @@ const fragmentShader = /* glsl */ `
       );
 
     /*
+     * -----------------------------------------------------
+     * Dirt / smudges
+     * -----------------------------------------------------
+     *
+     * Текстура лежит в screen-space UV — стыки осколков её
+     * не рвут, грязь «прилипла» к стеклу, а не к осколкам.
+     *
+     * На грязных участках зеркальный блик гаснет,
+     * зато широкая засветка поднимается — матовый налёт.
+     */
+
+    float dirt = texture2D(uDirt, vUv).r * uDirtOn;
+
+    specular *= 1.0 - dirt * 0.85;
+
+    broadHighlight *= 1.0 + dirt * 0.6;
+
+    color =
+      mix(
+        color,
+        color * vec3(0.86, 0.84, 0.79),
+        dirt * 0.55
+      );
+
+    color += dirt * 0.035;
+
+    /*
+     * -----------------------------------------------------
+     * Cracks
+     * -----------------------------------------------------
+     *
+     * Тонкие серебристые линии по поверхности осколка —
+     * следы растрескивания. Тоже screen-space, поэтому
+     * линия продолжается через соседние осколки.
+     *
+     * uCrack (0..1) включает их вместе с волной удара:
+     * пока стекло целое — трещин нет.
+     *
+     * Реакция на курсор: рядом с мышью трещины ловят свет
+     * и подсвечиваются, к краям гаснут до базовой яркости.
+     * Экранные координаты берём из мировых (пиксели центра
+     * контейнера) — тогда всё совпадает с uMouse.
+     */
+
+    float crackLine =
+      texture2D(uCrackTex, vUv).r * uCrack;
+
+    vec2 screenUv =
+      vec2(
+        vWorldPosition.x / uResolution.x + 0.5,
+        0.5 - vWorldPosition.y / uResolution.y
+      );
+
+    float cursorDist = distance(screenUv, uMouse);
+
+    float cursorGlow =
+      1.0 +
+      (1.0 - smoothstep(0.0, 0.3, cursorDist)) * 2.0;
+
+    color =
+      1.0 -
+      (1.0 - color) *
+      (1.0 - clamp(
+        vec3(0.5, 0.6, 0.72) *
+        crackLine *
+        0.3 *
+        cursorGlow,
+        0.0,
+        1.0
+      ));
+
+    /*
      * Свет — через screen-бленд: 1 - (1 - color) * (1 - glow).
      * В отличие от аддитивного сложения, результат никогда
      * не выходит за 1.0 — глянец ложится на поверхность,
@@ -404,10 +443,10 @@ const fragmentShader = /* glsl */ `
     vec3 glow =
       vec3(1.0) *
       specular *
-      0.85 +
+      0.2 +
       vec3(0.75, 0.9, 1.0) *
       broadHighlight *
-      0.10;
+      0.02;
 
     color =
       1.0 -
@@ -472,9 +511,15 @@ async function init() {
    * Camera
    */
 
-  camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100)
+  /*
+   * Перспективная камера: в ортопроекции глубина не видна
+   * (z не влияет на экранный размер) — параллакса не было.
+   * Точные frustum-параметры выставляет resize().
+   */
 
-  camera.position.z = 10
+  camera = new THREE.PerspectiveCamera(45, 1, 0.1, 10000)
+
+  camera.position.z = 600
 
   /*
    * Main shard group
@@ -495,6 +540,18 @@ async function init() {
   previewTexture.minFilter = THREE.LinearFilter
 
   previewTexture.magFilter = THREE.LinearFilter
+
+  /*
+   * Грязь: пятна, разводы от протирки, пыль.
+   */
+
+  dirtTexture = createDirtTexture()
+
+  /*
+   * Трещины: ветвящиеся линии от эпицентров удара.
+   */
+
+  crackTexture = createCrackTexture()
 
   /*
    * Resize.
@@ -543,6 +600,264 @@ function loadTexture(url: string): Promise<THREE.Texture> {
 
 /*
  * ---------------------------------------------------------
+ * Dirt texture
+ * ---------------------------------------------------------
+ *
+ * Слегка грязное стекло: облачные пятна, дугообразные
+ * разводы от протирки и мелкая пыль. Всё белым на чёрном —
+ * в шейдере текстура читается как маска dirt.
+ */
+
+function createDirtTexture(): THREE.CanvasTexture {
+  const size = 1024
+
+  const canvas = document.createElement('canvas')
+
+  canvas.width = size
+  canvas.height = size
+
+  const ctx = canvas.getContext('2d')!
+
+  ctx.fillStyle = 'rgb(0, 0, 0)'
+  ctx.fillRect(0, 0, size, size)
+
+  /*
+   * Облачная грязь — крупные мягкие пятна.
+   */
+
+  for (let i = 0; i < 48; i++) {
+    const x = Math.random() * size
+    const y = Math.random() * size
+    const radius = 70 + Math.random() * 240
+    const alpha = 0.05 + Math.random() * 0.1
+
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius)
+
+    gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`)
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+
+    ctx.fillStyle = gradient
+    ctx.beginPath()
+    ctx.arc(x, y, radius, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  /*
+   * Разводы: дуга из мягких кругов вдоль слегка
+   * изогнутой траектории — след протирки.
+   */
+
+  for (let i = 0; i < 16; i++) {
+    const startX = Math.random() * size
+    const startY = Math.random() * size
+    const length = 140 + Math.random() * 300
+    const angle = Math.random() * Math.PI
+    const width = 16 + Math.random() * 42
+    const bend = (Math.random() - 0.5) * 60
+
+    ctx.save()
+    ctx.translate(startX, startY)
+    ctx.rotate(angle)
+
+    for (let t = 0; t <= 1.001; t += 0.05) {
+      const px = (t - 0.5) * length
+      const py = Math.sin(t * Math.PI) * bend
+      const radius = Math.max(width * Math.sin(t * Math.PI), 1)
+
+      const gradient = ctx.createRadialGradient(px, py, 0, px, py, radius)
+
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.055)')
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+
+      ctx.fillStyle = gradient
+      ctx.beginPath()
+      ctx.arc(px, py, radius, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    ctx.restore()
+  }
+
+  /*
+   * Пыль: мелкие вкрапления.
+   */
+
+  for (let i = 0; i < 1400; i++) {
+    const x = Math.random() * size
+    const y = Math.random() * size
+    const radius = 0.4 + Math.random() * 1.4
+    const alpha = 0.08 + Math.random() * 0.35
+
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`
+    ctx.beginPath()
+    ctx.arc(x, y, radius, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  const texture = new THREE.CanvasTexture(canvas)
+
+  texture.colorSpace = THREE.NoColorSpace
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.generateMipmaps = false
+
+  return texture
+}
+
+/*
+ * ---------------------------------------------------------
+ * Crack texture
+ * ---------------------------------------------------------
+ *
+ * Ветвящиеся линии от двух эпицентров + обломки
+ * концентрических колец вокруг них. Белое по чёрному —
+ * в шейдере читается как маска серебристых трещин.
+ */
+
+function createCrackTexture(): THREE.CanvasTexture {
+  const size = 1024
+
+  const canvas = document.createElement('canvas')
+
+  canvas.width = size
+  canvas.height = size
+
+  const ctx = canvas.getContext('2d')!
+
+  ctx.fillStyle = 'rgb(0, 0, 0)'
+  ctx.fillRect(0, 0, size, size)
+
+  const origins = [
+    { x: size * (0.3 + Math.random() * 0.4), y: size * (0.3 + Math.random() * 0.4) },
+    { x: Math.random() * size, y: Math.random() * size },
+  ]
+
+  for (const origin of origins) {
+    const rays = 4 + Math.floor(Math.random() * 3)
+
+    for (let i = 0; i < rays; i++) {
+      const angle = (i / rays) * Math.PI * 2 + Math.random() * 0.6
+
+      drawCrackBranch(ctx, origin.x, origin.y, angle, size * (0.5 + Math.random() * 0.35), 0.3, 3)
+    }
+
+    /*
+     * Обломки колец — дуги вокруг эпицентра, как от удара.
+     */
+
+    const rings = 2 + Math.floor(Math.random() * 2)
+
+    for (let ring = 1; ring <= rings; ring++) {
+      const radius = 45 * ring + Math.random() * 40
+      const start = Math.random() * Math.PI * 2
+      const extent = 0.8 + Math.random() * 2.2
+
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.55 - ring * 0.12})`
+      ctx.lineWidth = 0.5 + Math.random() * 0.5
+
+      ctx.beginPath()
+      ctx.arc(origin.x, origin.y, radius, start, start + extent)
+      ctx.stroke()
+    }
+  }
+
+  /*
+   * Боковые трещины: покрывают весь блок,
+   * от края до края.
+   */
+
+  for (let i = 0; i < 10; i++) {
+    drawCrackBranch(
+      ctx,
+      Math.random() * size,
+      Math.random() * size,
+      Math.random() * Math.PI * 2,
+      size * (0.15 + Math.random() * 0.25),
+      0.7,
+      2,
+    )
+  }
+
+  const texture = new THREE.CanvasTexture(canvas)
+
+  texture.colorSpace = THREE.NoColorSpace
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.generateMipmaps = false
+
+  return texture
+}
+
+/*
+ * Одна трещина: ломаная со случайными поворотами,
+ * от неё ветвятся более тонкие и короткие ответвления.
+ */
+
+function drawCrackBranch(
+  ctx: CanvasRenderingContext2D,
+  startX: number,
+  startY: number,
+  angle: number,
+  length: number,
+  width: number,
+  depth: number,
+) {
+  const segments = 9
+  const step = length / segments
+
+  const points: [number, number][] = [[startX, startY]]
+
+  let x = startX
+  let y = startY
+  let a = angle
+
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.55 + Math.random() * 0.35})`
+  ctx.lineWidth = width
+  ctx.beginPath()
+  ctx.moveTo(x, y)
+
+  for (let i = 0; i < segments; i++) {
+    a += (Math.random() - 0.5) * 0.55
+
+    x += Math.cos(a) * step
+    y += Math.sin(a) * step
+
+    points.push([x, y])
+    ctx.lineTo(x, y)
+  }
+
+  ctx.stroke()
+
+  if (depth <= 0) {
+    return
+  }
+
+  const branches = 1 + Math.floor(Math.random() * 2)
+
+  for (let i = 0; i < branches; i++) {
+    const index = 2 + Math.floor(Math.random() * (points.length - 3))
+
+    const [bx, by] = points[index]!
+    const [px, py] = points[index - 1]!
+
+    const localAngle = Math.atan2(by - py, bx - px)
+    const spread = 0.4 + Math.random() * 0.7
+    const side = Math.random() < 0.5 ? -1 : 1
+
+    drawCrackBranch(
+      ctx,
+      bx,
+      by,
+      localAngle + side * spread,
+      length * (0.35 + Math.random() * 0.3),
+      Math.max(width * 0.6, 0.4),
+      depth - 1,
+    )
+  }
+}
+
+/*
+ * ---------------------------------------------------------
  * Resize
  * ---------------------------------------------------------
  */
@@ -579,16 +894,18 @@ function resize(): boolean {
   renderer.setSize(width, height, false)
 
   /*
-   * Camera coordinates correspond to pixels.
-   *
-   * This makes the shardGap property
-   * intuitive: 12 means roughly 12 screen px.
+   * Перспективная камера: расстояние подобрано так, что в
+   * плоскости z = 0 фрustum совпадает с контейнером 1:1 —
+   * осколки в покое дают пиксель-в-пиксель (зазор shardGap
+   * по-прежнему ~пиксели), а смещение в глубину масштабирует
+   * их — в этом и состоит параллакс.
    */
 
-  camera.left = -width / 2
-  camera.right = width / 2
-  camera.top = height / 2
-  camera.bottom = -height / 2
+  const fovRad = (45 * Math.PI) / 180
+
+  camera.fov = 45
+  camera.aspect = width / height
+  camera.position.z = height / (2 * Math.tan(fovRad / 2))
 
   camera.updateProjectionMatrix()
 
@@ -657,8 +974,8 @@ function generateShards() {
   }
 
   /*
-   * Generate slightly randomized
-   * Poisson-ish points.
+   * Точки с кластерами: около эпицентров — мелкая крошка,
+   * на свободной площади — крупные плиты.
    */
 
   const points = generatePoints(props.shardCount, width, height)
@@ -668,19 +985,26 @@ function generateShards() {
   const voronoi = delaunay.voronoi([0, 0, width, height])
 
   for (let i = 0; i < points.length; i++) {
-    const polygon = voronoi.cellPolygon(i)
+    const cell = openCellPolygon(voronoi.cellPolygon(i))
 
-    if (!polygon || polygon.length < 3) {
+    if (!cell) {
       continue
     }
 
-    const center = points[i]
+    /*
+     * Каждая ячейка дробится прямыми резами (0–2) на
+     * угловатые осколки, потом вершины слегка дёргаются —
+     * так исходный «шестиугольник» voronoi теряет
+     * правильный вид.
+     */
 
-    if (!center) {
-      continue
+    for (const piece of fracturePolygon(cell, 2)) {
+      const fractured = jitterPolygon(piece)
+
+      const center = polygonCentroid(fractured)
+
+      createShard(fractured, center, gapScale(fractured, center, props.shardGap))
     }
-
-    createShard(polygon, center, gapScale(polygon, center, props.shardGap))
   }
 
   /*
@@ -691,10 +1015,7 @@ function generateShards() {
    */
 
   for (const shard of shards) {
-    const distance = Math.hypot(
-      shard.center.x - shatterOrigin.x,
-      shard.center.y - shatterOrigin.y,
-    )
+    const distance = Math.hypot(shard.center.x - shatterOrigin.x, shard.center.y - shatterOrigin.y)
 
     shard.crackDelay = distance / CRACK_WAVE_SPEED - crackTime + Math.random() * 0.04
   }
@@ -710,11 +1031,7 @@ function generateShards() {
  * стороны, поэтому у соседей образуется ~gap пикселей.
  */
 
-function gapScale(
-  polygon: [number, number][],
-  center: THREE.Vector2,
-  gap: number,
-): number {
+function gapScale(polygon: [number, number][], center: THREE.Vector2, gap: number): number {
   let radius = 0
 
   for (const point of polygon) {
@@ -730,6 +1047,159 @@ function gapScale(
 
 /*
  * ---------------------------------------------------------
+ * Polygon helpers
+ * ---------------------------------------------------------
+ */
+
+/*
+ * d3 возвращает замкнутое кольцо (первая точка = последней) —
+ * для разрезов и площади это мусор, убираем.
+ */
+
+function openCellPolygon(ring: [number, number][] | null): [number, number][] | null {
+  if (!ring || ring.length < 4) {
+    return null
+  }
+
+  const first = ring[0]!
+  const last = ring[ring.length - 1]!
+
+  const closed = first[0] === last[0] && first[1] === last[1]
+
+  const polygon = closed ? ring.slice(0, -1) : ring
+
+  return polygon.length >= 3 ? polygon : null
+}
+
+function polygonCentroid(polygon: [number, number][]): THREE.Vector2 {
+  let x = 0
+  let y = 0
+
+  for (const point of polygon) {
+    x += point[0]
+    y += point[1]
+  }
+
+  return new THREE.Vector2(x / polygon.length, y / polygon.length)
+}
+
+function polygonArea(polygon: [number, number][]): number {
+  let sum = 0
+
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i]!
+    const b = polygon[(i + 1) % polygon.length]!
+
+    sum += a[0] * b[1] - b[0] * a[1]
+  }
+
+  return Math.abs(sum) / 2
+}
+
+/*
+ * Отрезок полигона полуплоскостью: keepSign = 1 — сторона,
+ * куда смотрит нормаль (nx, ny), keepSign = -1 — противоположная.
+ */
+
+function clipPolygonHalf(
+  polygon: [number, number][],
+  px: number,
+  py: number,
+  nx: number,
+  ny: number,
+  keepSign: 1 | -1,
+): [number, number][] {
+  const out: [number, number][] = []
+
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i]!
+    const b = polygon[(i + 1) % polygon.length]!
+
+    const da = ((a[0] - px) * nx + (a[1] - py) * ny) * keepSign
+    const db = ((b[0] - px) * nx + (b[1] - py) * ny) * keepSign
+
+    if (da >= 0) {
+      out.push(a)
+    }
+
+    if (da >= 0 !== db >= 0) {
+      const t = da / (da - db)
+
+      out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t])
+    }
+  }
+
+  return out
+}
+
+/*
+ * Дробление ячейки прямыми резами.
+ *
+ * В отличие от чистого voronoi, половинки — вытянутые
+ * угловатые куски с острыми углами: так ломается стекло,
+ * а не мыло.
+ */
+
+function fracturePolygon(polygon: [number, number][], depth: number): [number, number][][] {
+  if (depth <= 0) {
+    return [polygon]
+  }
+
+  if (polygonArea(polygon) < 700 || Math.random() > 0.55) {
+    return [polygon]
+  }
+
+  const center = polygonCentroid(polygon)
+
+  const angle = Math.random() * Math.PI
+
+  const nx = Math.cos(angle)
+  const ny = Math.sin(angle)
+
+  const offset = (Math.random() - 0.5) * 40
+
+  const px = center.x + nx * offset
+  const py = center.y + ny * offset
+
+  const left = clipPolygonHalf(polygon, px, py, nx, ny, 1)
+  const right = clipPolygonHalf(polygon, px, py, nx, ny, -1)
+
+  if (left.length < 3 || right.length < 3) {
+    return [polygon]
+  }
+
+  return [...fracturePolygon(left, depth - 1), ...fracturePolygon(right, depth - 1)]
+}
+
+/*
+ * Лёгкий дёрг вершин: рвёт правильные грани voronoi,
+ * край становится рваным. Сила мала — стыки с соседями
+ * гасятся зазором между осколками.
+ */
+
+function jitterPolygon(polygon: [number, number][]): [number, number][] {
+  const center = polygonCentroid(polygon)
+
+  let radius = 0
+
+  for (const point of polygon) {
+    radius = Math.max(radius, Math.hypot(point[0] - center.x, point[1] - center.y))
+  }
+
+  if (radius <= 0) {
+    return polygon
+  }
+
+  const strength = radius * 0.08
+
+  return polygon.map(([x, y]) => [
+    x + (Math.random() - 0.5) * 2 * strength,
+    y + (Math.random() - 0.5) * 2 * strength,
+  ])
+}
+
+/*
+ * ---------------------------------------------------------
  * Point generation
  * ---------------------------------------------------------
  */
@@ -738,32 +1208,71 @@ function generatePoints(count: number, width: number, height: number): THREE.Vec
   const points: THREE.Vector2[] = []
 
   /*
-   * Minimum distance between points.
-   *
-   * This prevents tiny Voronoi cells.
+   * Minimum distance between points — держит ячейки
+   * от совсем микроскопических.
    */
 
-  const minDistance = Math.sqrt((width * height) / count) * 0.55
+  const minDistance = Math.sqrt((width * height) / count) * 0.4
+
+  const insert = (point: THREE.Vector2, minDist: number): boolean => {
+    for (const existing of points) {
+      if (point.distanceTo(existing) < minDist) {
+        return false
+      }
+    }
+
+    points.push(point)
+
+    return true
+  }
+
+  /*
+   * Эпицентры: около них точки лепятся плотно — мелкая
+   * крошка. Остальная площадь засыпается редко — там
+   * получаются крупные плиты.
+   */
+
+  const spread = Math.min(width, height)
+
+  const clusters = Array.from({ length: 2 + Math.floor(Math.random() * 2) }, () => ({
+    x: Math.random() * width,
+    y: Math.random() * height,
+    r: spread * (0.1 + Math.random() * 0.1),
+  }))
+
+  const clusterQuota = Math.floor(count * 0.45)
 
   let attempts = 0
+
+  while (points.length < clusterQuota && attempts < count * 100) {
+    attempts++
+
+    const cluster = clusters[Math.floor(Math.random() * clusters.length)]!
+
+    /*
+     * Сумма двух равномерных — «колокол» вокруг эпицентра.
+     */
+
+    const distance = ((Math.random() + Math.random()) / 2) * cluster.r
+
+    const angle = Math.random() * Math.PI * 2
+
+    const point = new THREE.Vector2(
+      Math.min(Math.max(cluster.x + Math.cos(angle) * distance, 0), width),
+      Math.min(Math.max(cluster.y + Math.sin(angle) * distance, 0), height),
+    )
+
+    insert(point, minDistance * 0.5)
+  }
+
+  attempts = 0
 
   while (points.length < count && attempts < count * 100) {
     attempts++
 
     const point = new THREE.Vector2(Math.random() * width, Math.random() * height)
 
-    let valid = true
-
-    for (const existing of points) {
-      if (point.distanceTo(existing) < minDistance) {
-        valid = false
-        break
-      }
-    }
-
-    if (valid) {
-      points.push(point)
-    }
+    insert(point, minDistance)
   }
 
   /*
@@ -784,11 +1293,7 @@ function generatePoints(count: number, width: number, height: number): THREE.Vec
  * ---------------------------------------------------------
  */
 
-function createShard(
-  polygon: [number, number][],
-  center: THREE.Vector2,
-  baseScale = 1,
-) {
+function createShard(polygon: [number, number][], center: THREE.Vector2, baseScale = 1) {
   const width = container.value?.clientWidth ?? 0
 
   const height = container.value?.clientHeight ?? 0
@@ -853,6 +1358,22 @@ function createShard(
     uniforms: {
       uTexture: {
         value: previewTexture,
+      },
+
+      uDirt: {
+        value: dirtTexture,
+      },
+
+      uCrackTex: {
+        value: crackTexture,
+      },
+
+      uCrack: {
+        value: 0,
+      },
+
+      uDirtOn: {
+        value: props.showDirt ? 1 : 0,
       },
 
       uResolution: {
@@ -983,6 +1504,8 @@ function createShard(
 
     positionVelocity: new THREE.Vector2(),
 
+    zVelocity: 0,
+
     random: Math.random(),
 
     baseScale,
@@ -1050,17 +1573,56 @@ function handlePointerDown(event: PointerEvent) {
     const dirX = offsetX / length
     const dirY = offsetY / length
 
-    const kick = 0.006 + shard.random * 0.008
+    const kick = (0.006 + shard.random * 0.008) * props.impulse
 
     shard.rotationVelocity.x += dirY * kick
     shard.rotationVelocity.y += dirX * kick
 
-    const push = 0.8 + shard.random * 1.0
+    const push = (0.8 + shard.random * 1.0) * props.impulse
 
     shard.positionVelocity.x += dirX * push
     shard.positionVelocity.y += dirY * push
+
+    /*
+     * Осколки подпрыгивают и в глубину — ближние к камере
+     * выглядят крупнее, дальше пружина возвращает их назад.
+     */
+
+    shard.zVelocity += (10 + shard.random * 20) * props.impulse
   }
 }
+
+/*
+ * ---------------------------------------------------------
+ * Reactive props
+ * ---------------------------------------------------------
+ *
+ * Геометрические пропсы пересобирают осколки на лету
+ * (только после удара — целая панель от них не зависит).
+ * Остальные (depth, impulse, showDirt, showCracks)
+ * читаются в animate() напрямую.
+ */
+
+watch(
+  () => [props.shardCount, props.shardGap],
+  () => {
+    if (shattered.value) {
+      generateShards()
+    }
+  },
+)
+
+/*
+ * Восстановление целого стекла — снаружи через ref.
+ */
+
+function restoreGlass() {
+  shattered.value = false
+  crackTime = 0
+  generateShards()
+}
+
+defineExpose({ restore: restoreGlass })
 
 /*
  * ---------------------------------------------------------
@@ -1114,15 +1676,15 @@ function animate() {
 
     const distance = Math.sqrt(dx * dx + dy * dy)
 
-    const influence = shattered.value ? Math.max(0, 1.0 - distance * 2.4) : 0
+    const influence = shattered.value ? Math.max(0, 1.0 - distance * 1.8) : 0
 
     /*
      * Target rotation.
      */
 
-    const targetX = dy * -0.16 * influence
+    const targetX = dy * -0.2 * influence
 
-    const targetY = dx * 0.16 * influence
+    const targetY = dx * 0.19 * influence
 
     shard.rotationTarget.set(targetX, targetY)
 
@@ -1141,12 +1703,37 @@ function animate() {
     mesh.rotation.y += shard.rotationVelocity.y
 
     /*
-     * Very subtle floating motion.
+     * Дрейф в глубину + параллакс от курсора.
+     *
+     * Пока курсор мимо — осколки подняты к камере и слегка
+     * дрейфуют. Наведение опускает их к базовой плоскости:
+     * ближние и дальние меняют глубину по-разному — это и
+     * читается как параллакс. Пружина гасит колебания.
      */
 
-    const float = Math.sin(elapsed * 0.45 + shard.random * 10) * 0.25
+    const float = Math.sin(elapsed * 0.45 + shard.random * 10) * 5
 
-    mesh.position.z = float
+    /*
+     * Целая панель держится строго в z = 0: любой дрейф
+     * масштабировал бы её относительно <img> под стеклом.
+     */
+
+    /*
+     * Базовый подъём = depth, наведение опускает на depth / 3 —
+     * это сохраняет выверенные пропорции (30 / 10).
+     */
+
+    const zTarget = shattered.value
+      ? float + props.depth - influence * (props.depth / 3)
+      : 0
+
+    shard.zVelocity += (zTarget - mesh.position.z) * 0.07
+
+    shard.zVelocity *= 0.84
+
+    mesh.position.z += shard.zVelocity
+
+    let crackAmount = 0
 
     if (shattered.value) {
       /*
@@ -1154,16 +1741,19 @@ function animate() {
        * до baseScale, волна приходит от точки клика.
        */
 
-      const progress = Math.min(
-        Math.max((crackTime - shard.crackDelay) / CRACK_DURATION, 0),
-        1,
-      )
+      const progress = Math.min(Math.max((crackTime - shard.crackDelay) / CRACK_DURATION, 0), 1)
 
       const eased = 1 - Math.pow(1 - progress, 3)
 
       const scale = 1 + (shard.baseScale - 1) * eased
 
       mesh.scale.setScalar(scale)
+
+      /*
+       * Трещины проявляются вместе с волной удара.
+       */
+
+      crackAmount = eased
 
       /*
        * Пружина к basePosition гасит импульс удара.
@@ -1189,6 +1779,10 @@ function animate() {
     material.uniforms.uTime!.value = elapsed
 
     material.uniforms.uMouse!.value.lerp(smoothMouse, 0.08)
+
+    material.uniforms.uCrack!.value = crackAmount * (props.showCracks ? 1 : 0)
+
+    material.uniforms.uDirtOn!.value = props.showDirt ? 1 : 0
   }
 
   renderer.render(scene, camera)
@@ -1226,6 +1820,10 @@ onBeforeUnmount(() => {
   }
 
   previewTexture?.dispose()
+
+  dirtTexture?.dispose()
+
+  crackTexture?.dispose()
 
   renderer?.dispose()
 
