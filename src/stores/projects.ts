@@ -107,8 +107,11 @@ interface CreateBugInput {
 
 export const useProjectsStore = defineStore('projects', () => {
   const projects = ref<Project[]>([])
+  const myProjects = ref<Project[] | null>(null)
   const currentProject = ref<Project | null>(null)
   const bugs = ref<Bug[]>([])
+  const bugsProjectId = ref<string | null>(null)
+  const bugsLoading = ref(false)
   const currentBug = ref<Bug | null>(null)
   const comments = ref<BugComment[]>([])
   const commentsLoading = ref(false)
@@ -161,6 +164,8 @@ export const useProjectsStore = defineStore('projects', () => {
   }
 
   async function fetchBugs(projectId: string) {
+    bugsProjectId.value = projectId
+    bugsLoading.value = true
     try {
       const { data, error: fetchError } = await supabase
         .from('bugs')
@@ -170,10 +175,14 @@ export const useProjectsStore = defineStore('projects', () => {
         .order('created_at', { ascending: false })
 
       if (fetchError) throw fetchError
-      bugs.value = data ?? []
+      if (bugsProjectId.value === projectId) bugs.value = data ?? []
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Не удалось загрузить баги'
-      bugs.value = []
+      if (bugsProjectId.value === projectId) {
+        error.value = e instanceof Error ? e.message : 'Не удалось загрузить баги'
+        bugs.value = []
+      }
+    } finally {
+      if (bugsProjectId.value === projectId) bugsLoading.value = false
     }
   }
 
@@ -425,6 +434,39 @@ export const useProjectsStore = defineStore('projects', () => {
     return data as Report
   }
 
+  function sortByProjectName(list: Project[]): Project[] {
+    return [...list].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+  }
+
+  async function fetchMyProjects(): Promise<Project[]> {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) {
+        myProjects.value = []
+        return []
+      }
+
+      const { data, error: fetchError } = await supabase
+        .from('project_members')
+        .select('projects (*)')
+        .eq('user_id', user.id)
+
+      if (fetchError) throw fetchError
+
+      const list = (data ?? [])
+        .map((row) => row.projects as unknown as Project | null)
+        .filter((project): project is Project => project !== null && !project.is_deleted)
+
+      myProjects.value = sortByProjectName(list)
+      return myProjects.value
+    } catch {
+      myProjects.value = []
+      return []
+    }
+  }
+
   async function fetchMyProjectIds(): Promise<Set<string> | null> {
     try {
       const {
@@ -630,6 +672,9 @@ export const useProjectsStore = defineStore('projects', () => {
 
       const newProject = data as Project
       projects.value.unshift(newProject)
+      if (myProjects.value) {
+        myProjects.value = sortByProjectName([...myProjects.value, newProject])
+      }
       return newProject
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Не удалось создать проект'
@@ -728,6 +773,8 @@ export const useProjectsStore = defineStore('projects', () => {
   function clearCurrentProject() {
     currentProject.value = null
     bugs.value = []
+    bugsProjectId.value = null
+    bugsLoading.value = false
   }
 
   function clearError() {
@@ -736,8 +783,11 @@ export const useProjectsStore = defineStore('projects', () => {
 
   return {
     projects,
+    myProjects,
     currentProject,
     bugs,
+    bugsProjectId,
+    bugsLoading,
     currentBug,
     comments,
     commentsLoading,
@@ -765,6 +815,7 @@ export const useProjectsStore = defineStore('projects', () => {
     updateReport,
     fetchProjectMembers,
     fetchMyProjectIds,
+    fetchMyProjects,
     fetchAllProfiles,
     addProjectMember,
     removeProjectMember,

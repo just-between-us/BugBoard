@@ -48,6 +48,36 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'projects/:id/bugs',
+          name: 'project-bugs',
+          component: () => import('@/views/ProjectBugsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'projects/:id/reports',
+          name: 'project-reports',
+          component: () => import('@/views/ProjectReportsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'projects/:id/members',
+          name: 'project-members',
+          component: () => import('@/views/ProjectMembersView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'projects/:id/stats',
+          name: 'project-stats',
+          component: () => import('@/views/ProjectStatsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'projects/:id/settings',
+          name: 'project-settings',
+          component: () => import('@/views/ProjectSettingsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'projects/:projectId/bugs/:bugId',
           name: 'bug-detail',
           component: () => import('@/views/BugDetailView.vue'),

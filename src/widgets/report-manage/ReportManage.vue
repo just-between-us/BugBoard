@@ -75,7 +75,7 @@ const linkedBug = computed(() => {
             {{ reportStatusLabel(props.report.status) }}
             <ChevronsUpDown class="h-3 w-3 opacity-50" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" class="w-44">
+          <DropdownMenuContent align="start" class="w-44" match-trigger>
             <DropdownMenuItem
               v-for="opt in reportStatusOptions"
               :key="opt.value"
@@ -112,7 +112,7 @@ const linkedBug = computed(() => {
             {{ reportStatusLabel(props.report.flag) }}
             <ChevronsUpDown class="h-3 w-3 opacity-50" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" class="w-44">
+          <DropdownMenuContent align="start" class="w-44" match-trigger>
             <DropdownMenuItem
               v-for="opt in reportFlagOptions"
               :key="opt.value"
@@ -186,7 +186,7 @@ const linkedBug = computed(() => {
             Привязать к багу
             <ChevronsUpDown class="h-3 w-3 opacity-50" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" class="max-h-72 w-72 overflow-y-auto">
+          <DropdownMenuContent align="start" class="max-h-72 w-72 overflow-y-auto" match-trigger>
             <DropdownMenuItem
               v-for="bug in props.projectBugs"
               :key="bug.id"

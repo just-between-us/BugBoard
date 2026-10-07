@@ -112,7 +112,7 @@ function changeAuthor(userId: string) {
                 </span>
                 <ChevronsUpDown class="h-3.5 w-3.5 shrink-0 opacity-50" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" class="w-full">
+              <DropdownMenuContent align="start" class="w-full" match-trigger>
                 <DropdownMenuItem
                   v-for="opt in statusOptions"
                   :key="opt.value"
@@ -145,7 +145,7 @@ function changeAuthor(userId: string) {
                 </span>
                 <ChevronsUpDown class="h-3.5 w-3.5 shrink-0 opacity-50" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" class="w-56">
+              <DropdownMenuContent align="start" class="w-56" match-trigger>
                 <DropdownMenuItem
                   v-for="opt in severityOptions"
                   :key="opt.value"
@@ -175,7 +175,7 @@ function changeAuthor(userId: string) {
                 </span>
                 <ChevronsUpDown class="h-3.5 w-3.5 shrink-0 opacity-50" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" class="w-56">
+              <DropdownMenuContent align="start" class="w-56" match-trigger>
                 <DropdownMenuItem
                   v-for="opt in areaOptions"
                   :key="opt.value"
@@ -203,7 +203,11 @@ function changeAuthor(userId: string) {
                 </span>
                 <ChevronsUpDown class="h-3.5 w-3.5 shrink-0 opacity-50" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" class="max-h-72 w-64 overflow-y-auto">
+              <DropdownMenuContent
+                align="start"
+                class="max-h-72 w-64 overflow-y-auto"
+                match-trigger
+              >
                 <DropdownMenuItem
                   v-for="member in members"
                   :key="member.user_id"

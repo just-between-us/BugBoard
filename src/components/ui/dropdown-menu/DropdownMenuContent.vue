@@ -8,12 +8,14 @@ interface Props extends PrimitiveProps {
   class?: HTMLAttributes['class']
   align?: 'start' | 'center' | 'end'
   sideOffset?: number
+  matchTrigger?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   as: 'div',
   align: 'start',
   sideOffset: 4,
+  matchTrigger: false,
 })
 </script>
 
@@ -21,6 +23,9 @@ const props = withDefaults(defineProps<Props>(), {
   <RekaDropdownMenuContent
     :align="props.align"
     :side-offset="props.sideOffset"
+    :style="
+      props.matchTrigger ? { width: 'var(--reka-dropdown-menu-trigger-width, auto)' } : undefined
+    "
     data-slot="dropdown-menu-content"
     :as="props.as"
     :class="

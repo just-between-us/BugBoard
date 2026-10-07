@@ -140,7 +140,7 @@ watch(
           {{ adding ? 'Добавляем…' : 'Добавить участника' }}
           <ChevronsUpDown class="h-3.5 w-3.5 opacity-50" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" class="max-h-72 w-64 overflow-y-auto">
+        <DropdownMenuContent align="end" class="max-h-72 w-64 overflow-y-auto" match-trigger>
           <DropdownMenuItem
             v-for="profile in candidateProfiles"
             :key="profile.id"
