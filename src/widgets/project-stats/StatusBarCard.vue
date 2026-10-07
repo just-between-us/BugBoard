@@ -93,7 +93,7 @@ const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, {
         <ul class="mt-4 w-full flex flex-wrap justify-center gap-x-5 gap-y-2">
           <li v-for="row in rows" :key="row.key" class="flex w-full items-center gap-1.5 text-xs">
             <span
-              class="h-2 w-2 shrink-0 rounded-xs"
+              class="h-2 w-2 shrink-0 rounded-full"
               :style="{ backgroundColor: row.fill }"
               aria-hidden="true"
             />
