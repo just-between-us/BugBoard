@@ -1,0 +1,1 @@
+import{b as e,gt as t,j as n}from"./pinia-DQpmD-q9.js";import{t as r}from"./ProjectSectionPage-BayH7ds_.js";var i=n({__name:`ProjectStatsView`,setup(n){return(n,i)=>(t(),e(r,{section:`stats`}))}});export{i as default};

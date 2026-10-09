@@ -1,1 +1,0 @@
-import{b as e,gt as t,j as n}from"./pinia-DQpmD-q9.js";import{t as r}from"./ProjectSectionPage-bpPwTXdQ.js";var i=n({__name:`ProjectMembersView`,setup(n){return(n,i)=>(t(),e(r,{section:`members`}))}});export{i as default};
