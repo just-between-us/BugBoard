@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { ArrowUpDown, X } from '@lucide/vue'
 import type { Report } from '@/stores/projects'
 import { Button } from '@/components/ui/button'
@@ -11,10 +12,12 @@ import {
 } from '@/components/ui/select'
 import { reportStatusLabel, reportStatusOptions } from '@/entities/report'
 
+type SortBy = 'created_at' | 'updated_at' | 'manual'
+
 interface Props {
   statusFilter: 'all' | Report['status']
   bugFilter: 'all' | 'linked' | 'unlinked'
-  sortBy: 'created_at' | 'updated_at'
+  sortBy: SortBy
   sortOrder: 'asc' | 'desc'
   isMember: boolean
   hasActiveFilters: boolean
@@ -25,7 +28,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:statusFilter': [filter: 'all' | Report['status']]
   'update:bugFilter': [filter: 'all' | 'linked' | 'unlinked']
-  'update:sortBy': [sortBy: 'created_at' | 'updated_at']
+  'update:sortBy': [sortBy: SortBy]
   toggleSortOrder: []
   clearAllFilters: []
 }>()
@@ -33,7 +36,13 @@ const emit = defineEmits<{
 const sortOptions = [
   { value: 'created_at', label: 'Дата создания' },
   { value: 'updated_at', label: 'Дата обновления' },
+  { value: 'manual', label: 'Вручную' },
 ] as const
+
+// Ручной порядок доступен только участникам — только они могут перетаскивать
+const visibleSortOptions = computed(() =>
+  props.isMember ? sortOptions : sortOptions.filter((opt) => opt.value !== 'manual'),
+)
 
 function handleStatusFilterUpdate(filter: string) {
   emit('update:statusFilter', filter as 'all' | Report['status'])
@@ -44,7 +53,7 @@ function handleBugFilterUpdate(filter: string) {
 }
 
 function handleSortByUpdate(sortBy: string) {
-  emit('update:sortBy', sortBy as 'created_at' | 'updated_at')
+  emit('update:sortBy', sortBy as SortBy)
 }
 </script>
 
@@ -116,7 +125,7 @@ function handleSortByUpdate(sortBy: string) {
             <SelectValue placeholder="Сортировка" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
+            <SelectItem v-for="opt in visibleSortOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </SelectItem>
           </SelectContent>
@@ -125,6 +134,7 @@ function handleSortByUpdate(sortBy: string) {
           variant="outline"
           size="icon"
           class="h-8 w-8"
+          :disabled="props.sortBy === 'manual'"
           @click="emit('toggleSortOrder')"
           :aria-label="props.sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'"
         >

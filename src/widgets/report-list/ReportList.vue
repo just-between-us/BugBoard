@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { AlertTriangle, Inbox, Loader2, Search, Undo2 } from '@lucide/vue'
 import type { Bug, Report } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { Button } from '@/components/ui/button'
 import ReportCard from '@/entities/report-card/ReportCard.vue'
+import { DragHandle } from '@/components/drag-handle'
+import { useDragReorder } from '@/lib/useDragReorder'
 
 interface Props {
   reports: Report[]
@@ -11,6 +14,7 @@ interface Props {
   loading: boolean
   error: string | null
   isMember: boolean
+  reorderable: boolean
   bugs: Bug[]
   now: number
   savingId: string | null
@@ -35,9 +39,17 @@ const emit = defineEmits<{
   'remove-reply': [report: Report]
   'start-delete': [report: Report]
   'cancel-delete': [id: string]
+  reorder: [draggedId: string, beforeId: string | null]
 }>()
 
 const projectsStore = useProjectsStore()
+
+const listEl = ref<HTMLElement | null>(null)
+const { dragging } = useDragReorder({
+  container: listEl,
+  disabled: computed(() => !props.reorderable),
+  onReorder: (draggedId, beforeId) => emit('reorder', draggedId, beforeId),
+})
 
 const skeletonReports = [1, 2, 3]
 
@@ -126,8 +138,19 @@ function bugTitleFor(report: Report): string | null {
   </div>
 
   <!-- Reports list -->
-  <div v-else class="space-y-3">
-    <div v-for="report in props.reports" :key="report.id" class="relative">
+  <div
+    v-else
+    ref="listEl"
+    class="space-y-3"
+    :class="dragging ? 'select-none [&_*]:cursor-grabbing' : ''"
+    @dragstart.prevent
+  >
+    <div
+      v-for="report in props.reports"
+      :key="report.id"
+      :data-item-id="report.id"
+      class="relative"
+    >
       <ReportCard
         :report="report"
         :is-member="props.isMember"
@@ -149,6 +172,7 @@ function bugTitleFor(report: Report): string | null {
         @remove-reply="emit('remove-reply', report)"
         @start-delete="emit('start-delete', report)"
       />
+      <DragHandle v-if="props.reorderable" />
 
       <!-- Skeleton overlay while the report is pending deletion -->
       <div

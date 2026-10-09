@@ -5,6 +5,7 @@ import type { Bug, Report } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { toUserError } from '@/lib/format'
+import { applyIdOrder, loadIdOrder, moveId, saveIdOrder } from '@/lib/localOrder'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -31,8 +32,13 @@ const savingId = ref<string | null>(null)
 const searchQuery = ref('')
 const statusFilter = ref<'all' | Report['status']>('all')
 const bugFilter = ref<'all' | 'linked' | 'unlinked'>('all')
-const sortBy = ref<'created_at' | 'updated_at'>('created_at')
+const sortBy = ref<'created_at' | 'updated_at' | 'manual'>('created_at')
 const sortOrder = ref<'asc' | 'desc'>('desc')
+const reportOrder = ref<string[] | null>(null)
+
+function reportsOrderKey() {
+  return `bugboard-reports-order-${props.projectId}`
+}
 
 const SOFT_DELETE_MS = 10_000
 const pendingDeletes = ref<Record<string, number>>({})
@@ -66,6 +72,10 @@ const filteredReports = computed(() => {
     list = list.filter((r) => !r.bug_id)
   }
 
+  if (sortBy.value === 'manual') {
+    return applyIdOrder(list, reportOrder.value, (r) => r.id)
+  }
+
   const key = sortBy.value
   const dir = sortOrder.value === 'asc' ? 1 : -1
   list.sort((a, b) => dir * a[key].localeCompare(b[key]))
@@ -79,6 +89,19 @@ const hasActiveFilters = computed(
 
 function toggleSortOrder() {
   sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+}
+
+function reorderReports(draggedId: string, beforeId: string | null) {
+  if (sortBy.value !== 'manual') sortBy.value = 'manual'
+  // База — текущий отображаемый порядок: иначе первый drag в режиме дат
+  // склеил бы старый сохранённый порядок с новым жестом
+  const next = moveId(
+    filteredReports.value.map((r) => r.id),
+    draggedId,
+    beforeId,
+  )
+  reportOrder.value = next
+  saveIdOrder(reportsOrderKey(), next)
 }
 
 async function load() {
@@ -264,6 +287,9 @@ async function flushPendingDeletes() {
 watch(
   () => props.projectId,
   () => {
+    reportOrder.value = loadIdOrder(reportsOrderKey())
+    // Сохранённый порядок существует — по умолчанию показываем его
+    if (reportOrder.value) sortBy.value = 'manual'
     void load()
   },
   { immediate: true },
@@ -351,6 +377,7 @@ onBeforeUnmount(() => {
       :reply-error="replyError"
       :pending-deletes="pendingDeletes"
       :finalizing-deletes="finalizingDeletes"
+      :reorderable="isMember && !hasActiveFilters"
       @retry="load"
       @clearFilters="clearFilters"
       @set-status="setStatus"
@@ -362,6 +389,7 @@ onBeforeUnmount(() => {
       @remove-reply="removeReply"
       @start-delete="startSoftDelete"
       @cancel-delete="cancelSoftDelete"
+      @reorder="reorderReports"
     />
   </div>
 </template>

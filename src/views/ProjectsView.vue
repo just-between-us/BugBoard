@@ -5,12 +5,15 @@ import type { Project } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import ProjectCard from '@/entities/project-card/ProjectCard.vue'
+import { DragHandle } from '@/components/drag-handle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import { applyIdOrder, loadIdOrder, moveId, saveIdOrder } from '@/lib/localOrder'
+import { useDragReorder } from '@/lib/useDragReorder'
 import {
   Dialog,
   DialogContent,
@@ -43,10 +46,29 @@ function isMine(project: Project): boolean {
   return false
 }
 
-const myProjects = computed(() => projectsStore.projects.filter(isMine))
+const PROJECTS_ORDER_KEY = 'bugboard-projects-order'
+
+const myOrder = ref<string[] | null>(loadIdOrder(PROJECTS_ORDER_KEY))
+const myProjects = computed(() =>
+  applyIdOrder(projectsStore.projects.filter(isMine), myOrder.value, (project) => project.id),
+)
 const publicProjects = computed(() =>
   projectsStore.projects.filter((project) => project.is_public && !isMine(project)),
 )
+
+const projectsListEl = ref<HTMLElement | null>(null)
+const { dragging } = useDragReorder({
+  container: projectsListEl,
+  onReorder: (draggedId, beforeId) => {
+    const next = moveId(
+      myProjects.value.map((project) => project.id),
+      draggedId,
+      beforeId,
+    )
+    myOrder.value = next
+    saveIdOrder(PROJECTS_ORDER_KEY, next)
+  },
+})
 
 async function handleCreateProject() {
   if (!form.value.name.trim()) {
@@ -107,8 +129,8 @@ onMounted(() => {
             <span>Создать проект</span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left" align="center">
-          <p>Создать новый проект</p>
+        <TooltipContent side="top" align="center" arrow>
+          <p>Открыть окно создания</p>
         </TooltipContent>
       </Tooltip>
     </div>
@@ -195,8 +217,22 @@ onMounted(() => {
           </span>
         </div>
 
-        <div v-if="myProjects.length > 0" class="space-y-4">
-          <ProjectCard v-for="project in myProjects" :key="project.id" :project="project" />
+        <div
+          v-if="myProjects.length > 0"
+          ref="projectsListEl"
+          class="space-y-4"
+          :class="dragging ? 'select-none **:cursor-grabbing' : ''"
+          @dragstart.prevent
+        >
+          <div
+            v-for="project in myProjects"
+            :key="project.id"
+            :data-item-id="project.id"
+            class="relative"
+          >
+            <ProjectCard :project="project" />
+            <DragHandle />
+          </div>
         </div>
 
         <div v-else class="rounded-lg border border-dashed px-6 py-10 text-center">
