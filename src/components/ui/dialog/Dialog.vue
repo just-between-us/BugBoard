@@ -14,6 +14,10 @@ interface Props extends PrimitiveProps {
 
 const props = withDefaults(defineProps<Props>(), {
   as: 'div',
+  // Явные значения обязательны: при передаче `undefined` Vue приводит
+  // Boolean-проп к `false`, и reka считает диалог немодальным (без оверлея).
+  modal: true,
+  unmountOnHide: true,
 })
 
 const emit = defineEmits<{
