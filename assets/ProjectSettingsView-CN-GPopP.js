@@ -1,0 +1,1 @@
+import{b as e,gt as t,j as n}from"./pinia-DQpmD-q9.js";import{t as r}from"./ProjectSectionPage-C_5yzpDz.js";var i=n({__name:`ProjectSettingsView`,setup(n){return(n,i)=>(t(),e(r,{section:`settings`}))}});export{i as default};
