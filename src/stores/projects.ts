@@ -718,6 +718,92 @@ export const useProjectsStore = defineStore('projects', () => {
     return avatarUrl
   }
 
+  async function updateProject(
+    id: string,
+    updates: Partial<Pick<Project, 'name' | 'description' | 'is_public'>>,
+  ): Promise<Project> {
+    error.value = null
+    try {
+      const { data, error: updateError } = await supabase
+        .from('projects')
+        .update(updates)
+        .eq('id', id)
+        .eq('is_deleted', false)
+        .select()
+        .single()
+
+      if (updateError) throw updateError
+
+      const updated = data as Project
+      if (currentProject.value?.id === id) {
+        currentProject.value = updated
+      }
+      const inList = projects.value.find((p) => p.id === id)
+      if (inList) Object.assign(inList, updated)
+      const inMine = myProjects.value?.find((p) => p.id === id)
+      if (inMine) Object.assign(inMine, updated)
+      return updated
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Не удалось обновить проект'
+      throw e
+    }
+  }
+
+  async function removeProjectAvatar(projectId: string): Promise<void> {
+    const { data: updated, error: updateError } = await supabase
+      .from('projects')
+      .update({ avatar_url: null })
+      .eq('id', projectId)
+      .eq('is_deleted', false)
+      .select('id')
+      .maybeSingle()
+    if (updateError) throw updateError
+    if (!updated) {
+      throw new Error('Нет прав на обновление проекта')
+    }
+
+    if (currentProject.value?.id === projectId) {
+      currentProject.value = { ...currentProject.value, avatar_url: null }
+    }
+    const inList = projects.value.find((p) => p.id === projectId)
+    if (inList) {
+      inList.avatar_url = null
+    }
+    const inMine = myProjects.value?.find((p) => p.id === projectId)
+    if (inMine) {
+      inMine.avatar_url = null
+    }
+  }
+
+  async function deleteProject(id: string): Promise<void> {
+    error.value = null
+    try {
+      const { data: updated, error: updateError } = await supabase
+        .from('projects')
+        .update({ is_deleted: true })
+        .eq('id', id)
+        .eq('is_deleted', false)
+        .select('id')
+        .maybeSingle()
+
+      if (updateError) throw updateError
+      if (!updated) {
+        throw new Error('Нет прав на удаление проекта')
+      }
+
+      projects.value = projects.value.filter((p) => p.id !== id)
+      if (myProjects.value) {
+        myProjects.value = myProjects.value.filter((p) => p.id !== id)
+      }
+      if (currentProject.value?.id === id) {
+        clearCurrentProject()
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Не удалось удалить проект'
+      throw e
+    }
+  }
+
   async function createBug(input: CreateBugInput) {
     error.value = null
     try {
@@ -832,6 +918,9 @@ export const useProjectsStore = defineStore('projects', () => {
     fetchSharedProjects,
     createProject,
     uploadProjectAvatar,
+    updateProject,
+    removeProjectAvatar,
+    deleteProject,
     createBug,
     updateBug,
     clearCurrentProject,

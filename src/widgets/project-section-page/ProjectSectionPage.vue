@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Settings } from '@lucide/vue'
 import { useProjectsStore } from '@/stores/projects'
 import ProjectBugs from '@/widgets/project-bugs/ProjectBugs.vue'
 import ProjectReports from '@/widgets/project-reports/ProjectReports.vue'
 import ProjectMembers from '@/widgets/project-members/ProjectMembers.vue'
 import ProjectStats from '@/widgets/project-stats/ProjectStats.vue'
+import ProjectSettings from '@/widgets/project-settings/ProjectSettings.vue'
 
 type Section = 'bugs' | 'reports' | 'members' | 'stats' | 'settings'
 
@@ -97,10 +97,7 @@ watch(projectId, load, { immediate: true })
 
       <ProjectStats v-else-if="props.section === 'stats'" :project-id="projectId" />
 
-      <div v-else class="py-12 text-center">
-        <Settings class="mx-auto h-12 w-12 text-muted-foreground/50" />
-        <p class="mt-4 text-sm text-muted-foreground">Настройки проекта</p>
-      </div>
+      <ProjectSettings v-else :project-id="projectId" />
     </template>
   </div>
 </template>

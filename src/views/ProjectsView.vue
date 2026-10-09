@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { applyIdOrder, loadIdOrder, moveId, saveIdOrder } from '@/lib/localOrder'
@@ -317,13 +318,7 @@ onMounted(() => {
           </div>
 
           <div class="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="project-public"
-              v-model="form.is_public"
-              class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-              :disabled="submitting"
-            />
+            <Checkbox id="project-public" v-model="form.is_public" :disabled="submitting" />
             <Label for="project-public" class="text-sm cursor-pointer">
               Публичный проект (принимать репорты по ссылке)
             </Label>

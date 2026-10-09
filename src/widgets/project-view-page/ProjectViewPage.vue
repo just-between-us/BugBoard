@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watch, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, Settings } from '@lucide/vue'
+import { ChevronLeft } from '@lucide/vue'
 import { useProjectsStore } from '@/stores/projects'
 import { Button } from '@/components/ui/button'
 import ProjectHeader from '@/widgets/project-header/ProjectHeader.vue'
@@ -10,6 +10,7 @@ import ProjectBugs from '@/widgets/project-bugs/ProjectBugs.vue'
 import ProjectMembers from '@/widgets/project-members/ProjectMembers.vue'
 import ProjectReports from '@/widgets/project-reports/ProjectReports.vue'
 import ProjectStats from '@/widgets/project-stats/ProjectStats.vue'
+import ProjectSettings from '@/widgets/project-settings/ProjectSettings.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -101,11 +102,7 @@ watch(
         <!-- Stats (только для участников: вкладки рендерятся только в их ветке) -->
         <ProjectStats v-else-if="activeTab === 'stats'" :project-id="projectId" />
 
-        <div v-else-if="activeTab === 'settings'" class="text-center py-12">
-          <Settings class="mx-auto h-12 w-12 text-muted-foreground/50" />
-          <h3 class="mt-4 text-lg font-medium">Настройки</h3>
-          <p class="mt-1 text-sm text-muted-foreground">Настройки проекта</p>
-        </div>
+        <ProjectSettings v-else-if="activeTab === 'settings'" :project-id="projectId" />
       </template>
     </div>
   </div>

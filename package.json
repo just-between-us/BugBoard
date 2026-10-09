@@ -16,7 +16,7 @@
     "deploy": "npm run build && node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\" && gh-pages -d dist --dotfiles --nojekyll -m \"deploy\""
   },
   "dependencies": {
-    "@lucide/vue": "^1.51.0",
+    "@lucide/vue": "^1.54.0",
     "@supabase/supabase-js": "^2.117.2",
     "@tailwindcss/vite": "^4.3.3",
     "@unovis/ts": "^1.7.1",
@@ -26,7 +26,7 @@
     "clsx": "^2.1.1",
     "gh-pages": "^6.3.0",
     "pinia": "^4.0.3",
-    "reka-ui": "^2.10.5",
+    "reka-ui": "^2.11.0",
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.3.3",
     "vue": "^3.5.42",
