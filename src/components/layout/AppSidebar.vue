@@ -156,14 +156,57 @@ function handleNavigate() {
 }
 
 function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && !isDesktop.value && props.open) {
-    emit('update:open', false)
-  }
+  if (event.key !== 'Escape') return
+  if (signOutPending.value) cancelSignOut()
+  if (!isDesktop.value && props.open) emit('update:open', false)
 }
 
-async function handleSignOut() {
+const SIGN_OUT_DELAY_MS = 5000
+const RING_RADIUS = 14
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
+
+const signOutPending = ref(false)
+const signOutProgress = ref(0)
+let signOutRaf: number | null = null
+let signOutStartedAt = 0
+
+const signOutSecondsLeft = computed(() =>
+  Math.max(1, Math.ceil(((1 - signOutProgress.value) * SIGN_OUT_DELAY_MS) / 1000) - 1),
+)
+
+function cancelSignOut() {
+  if (signOutRaf !== null) cancelAnimationFrame(signOutRaf)
+  signOutRaf = null
+  signOutPending.value = false
+  signOutProgress.value = 0
+}
+
+async function completeSignOut() {
+  signOutPending.value = false
+  signOutProgress.value = 0
   await auth.signOut()
   router.push('/')
+}
+
+function tickSignOut(now: number) {
+  signOutProgress.value = Math.min((now - signOutStartedAt) / SIGN_OUT_DELAY_MS, 1)
+  if (signOutProgress.value >= 1) {
+    signOutRaf = null
+    void completeSignOut()
+    return
+  }
+  signOutRaf = requestAnimationFrame(tickSignOut)
+}
+
+function handleSignOut() {
+  if (signOutPending.value) {
+    cancelSignOut()
+    return
+  }
+  signOutPending.value = true
+  signOutProgress.value = 0
+  signOutStartedAt = performance.now()
+  signOutRaf = requestAnimationFrame(tickSignOut)
 }
 
 watch(
@@ -198,6 +241,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   mediaQuery?.removeEventListener('change', syncViewport)
   window.removeEventListener('keydown', handleKeydown)
+  cancelSignOut()
 })
 </script>
 
@@ -373,8 +417,55 @@ onBeforeUnmount(() => {
             {{ userName }}
           </span>
         </RouterLink>
-        <Button v-if="!collapsed" variant="ghost" size="icon" @click="handleSignOut">
-          <LogOut class="h-4 w-4" />
+        <Button
+          v-if="!collapsed"
+          variant="ghost"
+          size="icon"
+          class="relative transition-colors"
+          :class="
+            signOutPending && 'text-destructive hover:bg-destructive/10 hover:text-destructive'
+          "
+          :aria-label="
+            signOutPending ? 'Выйти из аккаунта — нажмите, чтобы отменить' : 'Выйти из аккаунта'
+          "
+          :title="
+            signOutPending
+              ? `Отменить выход (осталось ${signOutSecondsLeft - 1} с)`
+              : 'Выйти из аккаунта'
+          "
+          @click="handleSignOut"
+        >
+          <span class="relative flex items-center justify-center">
+            <Transition name="sign-out-ring">
+              <span
+                v-if="signOutPending"
+                class="absolute inset-0 flex items-center justify-center"
+                aria-hidden="true"
+              >
+                <svg class="size-8 -rotate-90" viewBox="0 0 32 32" fill="none">
+                  <circle
+                    cx="16"
+                    cy="16"
+                    :r="RING_RADIUS"
+                    class="stroke-border"
+                    stroke-width="3"
+                    stroke-opacity="0.7"
+                  />
+                  <circle
+                    cx="16"
+                    cy="16"
+                    :r="RING_RADIUS"
+                    class="stroke-destructive"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    :stroke-dasharray="RING_CIRCUMFERENCE"
+                    :stroke-dashoffset="RING_CIRCUMFERENCE * signOutProgress"
+                  />
+                </svg>
+              </span>
+            </Transition>
+            <LogOut class="h-4 w-4" />
+          </span>
         </Button>
       </div>
     </div>
@@ -398,5 +489,23 @@ onBeforeUnmount(() => {
 
 .project-slide-leave-to {
   transform: translateY(-100%);
+}
+
+.sign-out-ring-enter-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.sign-out-ring-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.sign-out-ring-enter-from,
+.sign-out-ring-leave-to {
+  opacity: 0;
+  transform: scale(0.5);
 }
 </style>
