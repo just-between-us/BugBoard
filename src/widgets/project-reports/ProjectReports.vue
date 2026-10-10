@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { MessageSquare, Search, X } from '@lucide/vue'
+import { MessageSquare, Search, X, ChevronDown, ChevronUp } from '@lucide/vue'
 import type { Bug, Report } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
@@ -38,7 +38,14 @@ const statusFilter = ref<'all' | Report['status']>('all')
 const bugFilter = ref<'all' | 'linked' | 'unlinked'>('all')
 const sortBy = ref<'created_at' | 'updated_at' | 'manual'>('created_at')
 const sortOrder = ref<'asc' | 'desc'>('desc')
+// Панель фильтров/сортировки на мобиле скрыта по умолчанию и переключается
+// кнопкой-стрелкой в строке поиска; на десктопе всегда видна
+const panelOpen = ref(false)
 const reportOrder = ref<string[] | null>(null)
+
+function togglePanel() {
+  panelOpen.value = !panelOpen.value
+}
 
 function reportsOrderKey() {
   return `bugboard-reports-order-${props.projectId}`
@@ -326,24 +333,38 @@ onBeforeUnmount(() => {
         <Badge v-if="!loading && !error" variant="secondary">{{ reports.length }}</Badge>
       </h3>
 
-      <div v-if="reports.length > 0" class="relative w-full sm:w-64">
-        <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Поиск по репортам..."
-          v-model="searchQuery"
-          class="pl-10 pr-9"
-          aria-label="Поиск по репортам"
-        />
+      <div v-if="reports.length > 0" class="flex w-full items-center gap-2">
+        <div class="relative min-w-0 flex-1">
+          <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Поиск по репортам..."
+            v-model="searchQuery"
+            class="pl-10 pr-9"
+            aria-label="Поиск по репортам"
+          />
+          <Button
+            v-if="searchQuery"
+            variant="ghost"
+            size="icon"
+            class="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+            @click="searchQuery = ''"
+            aria-label="Очистить поиск"
+          >
+            <X class="h-4 w-4" />
+          </Button>
+        </div>
+        <!-- Мобиле: кнопка-стрелка открывает/закрывает панель фильтров и сортировки -->
         <Button
-          v-if="searchQuery"
-          variant="ghost"
-          size="icon"
-          class="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
-          @click="searchQuery = ''"
-          aria-label="Очистить поиск"
+          variant="outline"
+          size="icon-sm"
+          class="shrink-0 sm:hidden"
+          @click="togglePanel"
+          :aria-expanded="panelOpen"
+          aria-label="Фильтры и сортировка"
         >
-          <X class="h-4 w-4" />
+          <ChevronUp v-if="panelOpen" class="h-4 w-4" />
+          <ChevronDown v-else class="h-4 w-4" />
         </Button>
       </div>
     </div>
@@ -362,6 +383,7 @@ onBeforeUnmount(() => {
       :sortOrder="sortOrder"
       :isMember="isMember"
       :hasActiveFilters="hasActiveFilters"
+      :panelOpen="panelOpen"
       @update:statusFilter="statusFilter = $event"
       @update:bugFilter="bugFilter = $event"
       @update:sortBy="sortBy = $event"

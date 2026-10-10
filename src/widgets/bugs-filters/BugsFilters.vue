@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Search, X, ArrowUpDown, Plus, Ellipsis } from '@lucide/vue'
-import { computed, ref, watch } from 'vue'
-import { useEventListener, useMediaQuery } from '@vueuse/core'
+import { Search, X, ArrowUpDown, Plus, ChevronDown, ChevronUp } from '@lucide/vue'
+import { computed, ref } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Input } from '@/components/ui/input'
@@ -41,42 +41,12 @@ const emit = defineEmits<{
 const { scroller, scrolledStart, scrolledEnd, updateEdges } = useScrollEdges()
 
 const isMobile = useMediaQuery('(max-width: 640px)')
-const collapsed = ref(false)
+// Панель (создание/фильтры/сортировка) на мобиле скрыта по умолчанию и
+// открывается/закрывается только кнопкой-стрелкой; на десктопе всегда видна
+const panelOpen = ref(false)
 
-// На десктопе коллапс не нужен — сбрасываем при ресайзе
-watch(isMobile, (mobile) => {
-  if (!mobile) collapsed.value = false
-})
-
-const COLLAPSE_PX = 10
-let anchorY: number | null = null
-
-// Скролл вниз сворачивает панель (создание/фильтры/сортировка), вверх — разворачивает
-function onScroll() {
-  const y = window.scrollY
-  if (!isMobile.value) {
-    collapsed.value = false
-    anchorY = y
-    return
-  }
-  if (anchorY === null) {
-    anchorY = y
-    return
-  }
-  const delta = y - anchorY
-  if (delta > COLLAPSE_PX) {
-    collapsed.value = true
-    anchorY = y
-  } else if (delta < 0) {
-    collapsed.value = false
-    anchorY = y
-  }
-}
-
-useEventListener('scroll', onScroll, { passive: true })
-
-function expandPanel() {
-  collapsed.value = false
+function togglePanel() {
+  panelOpen.value = !panelOpen.value
 }
 
 // «Особая» сортировка = не по умолчанию (дата создания / по убыванию)
@@ -156,11 +126,11 @@ const activeStateCount = computed(
   () => activeFilterChips.value.length + (isSortCustom.value ? 1 : 0),
 )
 
-// Кнопка «⋯» — только на мобиле в свёрнутом состоянии
-const showExpandBtn = computed(() => isMobile.value && collapsed.value)
-// Ряд подсказок — только на мобиле, свёрнуто и есть что показать
+// Кнопка-стрелка — только на мобиле (на десктопе панель всегда видна)
+const showToggleBtn = computed(() => isMobile.value)
+// Ряд подсказок — на мобиле, когда панель закрыта и есть что показать
 const showCollapsedHints = computed(
-  () => isMobile.value && collapsed.value && activeStateCount.value > 0,
+  () => isMobile.value && !panelOpen.value && activeStateCount.value > 0,
 )
 
 function resetSort() {
@@ -230,13 +200,15 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
         </TooltipContent>
       </Tooltip>
       <Button
-        v-if="showExpandBtn"
+        v-if="showToggleBtn"
         variant="outline"
         size="icon-sm"
-        @click="expandPanel"
-        aria-label="Показать фильтры и сортировку"
+        @click="togglePanel"
+        :aria-expanded="panelOpen"
+        aria-label="Фильтры и сортировка"
       >
-        <Ellipsis class="h-4 w-4" />
+        <ChevronUp v-if="panelOpen" class="h-4 w-4" />
+        <ChevronDown v-else class="h-4 w-4" />
       </Button>
     </div>
 
@@ -275,175 +247,161 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
       </span>
     </div>
 
-    <!-- Сворачиваемая панель: создание + фильтры + сортировка.
-         На десктопе всегда развёрнута; на мобиле плавно схлопывается при
-         скролле вниз (grid 0fr ↔ 1fr) и разворачивается по «⋯» или скроллу вверх -->
-    <div class="bugs-panel" :class="{ 'is-collapsed': isMobile && collapsed }">
-      <div>
-        <div class="space-y-2">
-          <!-- Мобильные: кнопка создания во всю ширину -->
-          <Button class="w-full sm:hidden" @click="emit('open-create-bug')">
-            <Plus class="h-4 w-4 mr-2" />
-            Создать баг
-          </Button>
+    <!-- Панель: создание + фильтры + сортировка. На десктопе всегда видна;
+         на мобиле открывается/закрывается только кнопкой-стрелкой -->
+    <div v-show="!isMobile || panelOpen" class="space-y-2">
+      <!-- Мобильные: кнопка создания во всю ширину -->
+      <Button class="w-full sm:hidden" @click="emit('open-create-bug')">
+        <Plus class="h-4 w-4 mr-2" />
+        Создать баг
+      </Button>
 
-          <!-- Фильтры + сброс + сортировка. На десктопе — одна строка: слева
+      <!-- Фильтры + сброс + сортировка. На десктопе — одна строка: слева
                скролл фильтров, справа «Сбросить всё» и группа сортировки. На
                мобиле группа сортировки переносится во всю ширину -->
-          <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <div
+          ref="scroller"
+          class="scroll-x-fade min-w-0 flex-1 overflow-x-auto py-1"
+          :class="{ 'is-scrolled-start': scrolledStart, 'is-scrolled-end': scrolledEnd }"
+          @scroll.passive="updateEdges"
+        >
+          <div class="flex w-max items-center gap-2">
             <div
-              ref="scroller"
-              class="scroll-x-fade min-w-0 flex-1 overflow-x-auto py-1"
-              :class="{ 'is-scrolled-start': scrolledStart, 'is-scrolled-end': scrolledEnd }"
-              @scroll.passive="updateEdges"
+              v-if="props.statusFilter !== 'all'"
+              class="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md"
             >
-              <div class="flex w-max items-center gap-2">
-                <div
-                  v-if="props.statusFilter !== 'all'"
-                  class="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md"
-                >
-                  <span class="text-sm font-medium">{{ getStatusLabel(props.statusFilter) }}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    class="h-6 w-6"
-                    @click="handleStatusFilterUpdate('all')"
-                    aria-label="Сбросить фильтр статуса"
-                  >
-                    <X class="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <div v-else>
-                  <Select
-                    :model-value="props.statusFilter"
-                    @update:modelValue="handleStatusFilterUpdate"
-                  >
-                    <SelectTrigger class="w-36">
-                      <SelectValue placeholder="Статус" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Все статусы</SelectItem>
-                      <SelectItem v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-                        {{ opt.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div
-                  v-if="props.severityFilter !== 'all'"
-                  class="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md"
-                >
-                  <span class="text-sm font-medium">
-                    {{ getSeverityLabel(props.severityFilter) }}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    class="h-6 w-6"
-                    @click="handleSeverityFilterUpdate('all')"
-                    aria-label="Сбросить фильтр важности"
-                  >
-                    <X class="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <div v-else>
-                  <Select
-                    :model-value="props.severityFilter"
-                    @update:modelValue="handleSeverityFilterUpdate"
-                  >
-                    <SelectTrigger class="w-36">
-                      <SelectValue placeholder="Важность" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Все важности</SelectItem>
-                      <SelectItem
-                        v-for="opt in severityOptions"
-                        :key="opt.value"
-                        :value="opt.value"
-                      >
-                        {{ opt.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div
-                  v-if="props.areaFilter !== 'all'"
-                  class="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md"
-                >
-                  <span class="text-sm font-medium">{{ getAreaLabel(props.areaFilter) }}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    class="h-6 w-6"
-                    @click="handleAreaFilterUpdate('all')"
-                    aria-label="Сбросить фильтр области"
-                  >
-                    <X class="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <div v-else>
-                  <Select
-                    :model-value="props.areaFilter"
-                    @update:modelValue="handleAreaFilterUpdate"
-                  >
-                    <SelectTrigger class="w-40">
-                      <SelectValue placeholder="Область" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Все области</SelectItem>
-                      <SelectItem v-for="opt in areaOptions" :key="opt.value" :value="opt.value">
-                        {{ opt.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <span class="text-sm font-medium">{{ getStatusLabel(props.statusFilter) }}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-6 w-6"
+                @click="handleStatusFilterUpdate('all')"
+                aria-label="Сбросить фильтр статуса"
+              >
+                <X class="h-3.5 w-3.5" />
+              </Button>
             </div>
-
-            <Button
-              v-if="props.hasActiveFilters"
-              variant="destructive"
-              size="sm"
-              class="shrink-0"
-              @click="emit('clearAllFilters')"
-            >
-              <X class="h-4 w-4 mr-1" />
-              Сбросить всё
-            </Button>
-
-            <!-- Группа сортировки: на десктопе прижата вправо в той же строке,
-                 на мобиле занимает всю ширину отдельной строкой -->
-            <ButtonGroup class="w-full shrink-0 sm:w-fit">
-              <Select :model-value="props.sortBy" @update:modelValue="handleSortByUpdate">
-                <SelectTrigger
-                  class="h-8 min-w-0 flex-1 sm:w-fit sm:flex-none"
-                  aria-label="Сортировка"
-                >
-                  <SelectValue placeholder="Сортировка" />
+            <div v-else>
+              <Select
+                :model-value="props.statusFilter"
+                @update:modelValue="handleStatusFilterUpdate"
+              >
+                <SelectTrigger class="w-36">
+                  <SelectValue placeholder="Статус" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
+                  <SelectItem value="all">Все статусы</SelectItem>
+                  <SelectItem v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
                     {{ opt.label }}
                   </SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div
+              v-if="props.severityFilter !== 'all'"
+              class="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md"
+            >
+              <span class="text-sm font-medium">
+                {{ getSeverityLabel(props.severityFilter) }}
+              </span>
               <Button
-                variant="outline"
-                size="icon-sm"
-                class="shrink-0"
-                @click="emit('toggleSortOrder')"
-                :aria-label="props.sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'"
+                variant="ghost"
+                size="icon"
+                class="h-6 w-6"
+                @click="handleSeverityFilterUpdate('all')"
+                aria-label="Сбросить фильтр важности"
               >
-                <ArrowUpDown class="h-4 w-4" />
-                <span class="sr-only">
-                  {{ props.sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию' }}
-                </span>
+                <X class="h-3.5 w-3.5" />
               </Button>
-            </ButtonGroup>
+            </div>
+            <div v-else>
+              <Select
+                :model-value="props.severityFilter"
+                @update:modelValue="handleSeverityFilterUpdate"
+              >
+                <SelectTrigger class="w-36">
+                  <SelectValue placeholder="Важность" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все важности</SelectItem>
+                  <SelectItem v-for="opt in severityOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div
+              v-if="props.areaFilter !== 'all'"
+              class="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md"
+            >
+              <span class="text-sm font-medium">{{ getAreaLabel(props.areaFilter) }}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-6 w-6"
+                @click="handleAreaFilterUpdate('all')"
+                aria-label="Сбросить фильтр области"
+              >
+                <X class="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            <div v-else>
+              <Select :model-value="props.areaFilter" @update:modelValue="handleAreaFilterUpdate">
+                <SelectTrigger class="w-40">
+                  <SelectValue placeholder="Область" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все области</SelectItem>
+                  <SelectItem v-for="opt in areaOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
+
+        <Button
+          v-if="props.hasActiveFilters"
+          variant="destructive"
+          size="sm"
+          class="shrink-0"
+          @click="emit('clearAllFilters')"
+          aria-label="Сбросить всё"
+        >
+          <X class="h-4 w-4 sm:mr-1" />
+          <span class="hidden sm:inline">Сбросить всё</span>
+        </Button>
+
+        <!-- Группа сортировки: на десктопе прижата вправо в той же строке,
+                 на мобиле занимает всю ширину отдельной строкой -->
+        <ButtonGroup class="w-full shrink-0 sm:w-fit">
+          <Select :model-value="props.sortBy" @update:modelValue="handleSortByUpdate">
+            <SelectTrigger class="h-8 min-w-0 flex-1 sm:w-fit sm:flex-none" aria-label="Сортировка">
+              <SelectValue placeholder="Сортировка" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            class="shrink-0"
+            @click="emit('toggleSortOrder')"
+            :aria-label="props.sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'"
+          >
+            <ArrowUpDown class="h-4 w-4" />
+            <span class="sr-only">
+              {{ props.sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию' }}
+            </span>
+          </Button>
+        </ButtonGroup>
       </div>
     </div>
   </div>

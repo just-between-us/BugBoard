@@ -191,19 +191,3 @@
     background: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
   }
 }
-
-/* Плавное сворачивание/разворачивание панели фильтров багов (grid 0fr ↔ 1fr) */
-.bugs-panel {
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows 0.2s ease;
-}
-
-.bugs-panel.is-collapsed {
-  grid-template-rows: 0fr;
-}
-
-.bugs-panel > * {
-  overflow: hidden;
-  min-height: 0;
-}
