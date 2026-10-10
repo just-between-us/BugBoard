@@ -15,9 +15,13 @@ import ReportList from '@/widgets/report-list/ReportList.vue'
 interface Props {
   projectId: string
   isMember: boolean
+  /** true — контекст (вкладка/раздел) уже назван снаружи, заголовок не нужен */
+  embedded?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  embedded: false,
+})
 
 const projectsStore = useProjectsStore()
 const authStore = useAuthStore()
@@ -265,6 +269,7 @@ function finalizeDelete(id: string): Promise<void> {
     try {
       await projectsStore.updateReport(id, { is_deleted: true })
       reports.value = reports.value.filter((r) => r.id !== id)
+      void projectsStore.fetchTabsCounts(props.projectId)
     } catch (e) {
       actionError.value = toUserError(e)
     } finally {
@@ -309,9 +314,13 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="space-y-4">
-    <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h3 class="flex items-center gap-2 text-lg font-medium">
+    <!-- Header: во вкладках/разделах заголовок дублирует контекст — остаётся только поиск -->
+    <div
+      v-if="!embedded || reports.length > 0"
+      class="flex flex-wrap items-center gap-3"
+      :class="embedded ? 'justify-end' : 'justify-between'"
+    >
+      <h3 v-if="!embedded" class="flex items-center gap-2 text-lg font-medium">
         <MessageSquare class="h-5 w-5 text-muted-foreground" />
         Репорты
         <Badge v-if="!loading && !error" variant="secondary">{{ reports.length }}</Badge>

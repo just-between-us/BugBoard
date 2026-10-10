@@ -128,3 +128,82 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Горизонтальный скролл с масками-затемнениями у краёв (табы, фильтры).
+   Классы is-scrolled-start / is-scrolled-end ставит useScrollEdges. */
+@media (hover: none) {
+  .scroll-x-fade {
+    scrollbar-width: none;
+  }
+
+  .scroll-x-fade::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scroll-x-fade.is-scrolled-start {
+    -webkit-mask-image: linear-gradient(to right, transparent, black 16px);
+    mask-image: linear-gradient(to right, transparent, black 16px);
+  }
+
+  .scroll-x-fade.is-scrolled-end {
+    -webkit-mask-image: linear-gradient(to left, transparent, black 16px);
+    mask-image: linear-gradient(to left, transparent, black 16px);
+  }
+
+  .scroll-x-fade.is-scrolled-start.is-scrolled-end {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 16px,
+      black calc(100% - 16px),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 16px,
+      black calc(100% - 16px),
+      transparent
+    );
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .scroll-x-fade {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 50%, transparent) transparent;
+  }
+
+  .scroll-x-fade::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .scroll-x-fade::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-x-fade::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+    border-radius: 9999px;
+  }
+
+  .scroll-x-fade::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
+  }
+}
+
+/* Плавное сворачивание/разворачивание панели фильтров багов (grid 0fr ↔ 1fr) */
+.bugs-panel {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.2s ease;
+}
+
+.bugs-panel.is-collapsed {
+  grid-template-rows: 0fr;
+}
+
+.bugs-panel > * {
+  overflow: hidden;
+  min-height: 0;
+}

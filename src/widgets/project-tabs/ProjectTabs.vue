@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { Bug, AlertTriangle, Users, Settings, ChartColumn } from '@lucide/vue'
 import { useProjectsStore } from '@/stores/projects'
+import { useScrollEdges } from '@/lib/useScrollEdges'
 import { Badge } from '@/components/ui/badge'
 
 type TabId = 'bugs' | 'reports' | 'members' | 'stats' | 'settings'
@@ -14,6 +15,8 @@ interface Props {
 const props = defineProps<Props>()
 const projectsStore = useProjectsStore()
 
+const { scroller, scrolledStart, scrolledEnd, updateEdges } = useScrollEdges()
+
 const tabs = [
   { id: 'bugs', label: 'Баги', icon: Bug },
   { id: 'reports', label: 'Репорты', icon: AlertTriangle },
@@ -22,40 +25,36 @@ const tabs = [
   { id: 'settings', label: 'Настройки', icon: Settings },
 ] as const
 
-const scroller = ref<HTMLElement | null>(null)
-const scrolledStart = ref(false)
-const scrolledEnd = ref(false)
+// Бейджи показываем только если счётчики загружены для текущего проекта
+const reportsCount = computed(() =>
+  projectsStore.tabsCounts.projectId === projectsStore.currentProject?.id
+    ? projectsStore.tabsCounts.reports
+    : null,
+)
+const membersCount = computed(() =>
+  projectsStore.tabsCounts.projectId === projectsStore.currentProject?.id
+    ? projectsStore.tabsCounts.members
+    : null,
+)
 
-let observer: ResizeObserver | null = null
-
-function updateEdges() {
-  const el = scroller.value
-  if (!el) return
-  scrolledStart.value = el.scrollLeft > 0
-  scrolledEnd.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+function tabCount(tabId: TabId): number | null {
+  const count =
+    tabId === 'bugs'
+      ? projectsStore.bugs.length
+      : tabId === 'reports'
+        ? reportsCount.value
+        : tabId === 'members'
+          ? membersCount.value
+          : null
+  return count !== null && count > 0 ? count : null
 }
-
-onMounted(() => {
-  updateEdges()
-  window.addEventListener('resize', updateEdges)
-  if (scroller.value && 'ResizeObserver' in window) {
-    observer = new ResizeObserver(updateEdges)
-    observer.observe(scroller.value)
-    if (scroller.value.firstElementChild) observer.observe(scroller.value.firstElementChild)
-  }
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateEdges)
-  observer?.disconnect()
-})
 </script>
 
 <template>
   <div class="border-b border-border">
     <div
       ref="scroller"
-      class="tabs-scroller overflow-x-auto"
+      class="scroll-x-fade overflow-x-auto"
       :class="{ 'is-scrolled-start': scrolledStart, 'is-scrolled-end': scrolledEnd }"
       @scroll.passive="updateEdges"
     >
@@ -75,78 +74,11 @@ onBeforeUnmount(() => {
         >
           <component :is="tab.icon" class="h-4 w-4 shrink-0" />
           <span>{{ tab.label }}</span>
-          <Badge
-            v-if="tab.id === 'bugs' && projectsStore.bugs.length > 0"
-            variant="secondary"
-            class="ml-1"
-          >
-            {{ projectsStore.bugs.length }}
+          <Badge v-if="tabCount(tab.id)" variant="secondary" class="ml-1">
+            {{ tabCount(tab.id) }}
           </Badge>
         </button>
       </nav>
     </div>
   </div>
 </template>
-
-<style scoped>
-@media (hover: none) {
-  .tabs-scroller {
-    scrollbar-width: none;
-  }
-
-  .tabs-scroller::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tabs-scroller.is-scrolled-start {
-    -webkit-mask-image: linear-gradient(to right, transparent, black 16px);
-    mask-image: linear-gradient(to right, transparent, black 16px);
-  }
-
-  .tabs-scroller.is-scrolled-end {
-    -webkit-mask-image: linear-gradient(to left, transparent, black 16px);
-    mask-image: linear-gradient(to left, transparent, black 16px);
-  }
-
-  .tabs-scroller.is-scrolled-start.is-scrolled-end {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      black 16px,
-      black calc(100% - 16px),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      black 16px,
-      black calc(100% - 16px),
-      transparent
-    );
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .tabs-scroller {
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 50%, transparent) transparent;
-  }
-
-  .tabs-scroller::-webkit-scrollbar {
-    height: 6px;
-  }
-
-  .tabs-scroller::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .tabs-scroller::-webkit-scrollbar-thumb {
-    background: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
-    border-radius: 9999px;
-  }
-
-  .tabs-scroller::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
-  }
-}
-</style>

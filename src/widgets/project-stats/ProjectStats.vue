@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { AlertTriangle, ChartColumn, Loader2 } from '@lucide/vue'
+import { AlertTriangle, Loader2 } from '@lucide/vue'
 import type { Bug, ProjectMember, Report } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { toUserError } from '@/lib/format'
@@ -22,9 +22,13 @@ import TimelineCard from './TimelineCard.vue'
 
 interface Props {
   projectId: string
+  /** true — вкладка/раздел уже названы снаружи, плашка-контекст не нужна */
+  embedded?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  embedded: false,
+})
 
 const projectsStore = useProjectsStore()
 
@@ -87,15 +91,10 @@ watch(
 
 <template>
   <div class="space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h3 class="flex items-center gap-2 text-lg font-medium">
-        <ChartColumn class="h-5 w-5 text-muted-foreground" />
-        Статистика
-      </h3>
-      <p v-if="!loading && !error" class="text-xs text-muted-foreground">
-        Только для участников проекта
-      </p>
-    </div>
+    <!-- Заголовок дублирует вкладку/раздел; на странице-разделе остаётся только пояснение -->
+    <p v-if="!embedded && !loading && !error" class="text-xs text-muted-foreground">
+      Только для участников проекта
+    </p>
 
     <!-- Loading -->
     <div v-if="loading" class="space-y-4" role="status" aria-label="Загрузка статистики">

@@ -112,6 +112,12 @@ export const useProjectsStore = defineStore('projects', () => {
   const bugs = ref<Bug[]>([])
   const bugsProjectId = ref<string | null>(null)
   const bugsLoading = ref(false)
+  // Счётчики для бейджей вкладок и заголовков разделов; null — ещё не загружены
+  const tabsCounts = ref<{
+    projectId: string | null
+    reports: number | null
+    members: number | null
+  }>({ projectId: null, reports: null, members: null })
   const currentBug = ref<Bug | null>(null)
   const comments = ref<BugComment[]>([])
   const commentsLoading = ref(false)
@@ -497,6 +503,35 @@ export const useProjectsStore = defineStore('projects', () => {
     return (data ?? []) as ProjectMember[]
   }
 
+  async function fetchTabsCounts(projectId: string): Promise<void> {
+    if (tabsCounts.value.projectId !== projectId) {
+      tabsCounts.value = { projectId, reports: null, members: null }
+    }
+
+    const [reportsRes, membersRes] = await Promise.all([
+      supabase
+        .from('reports')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+        .eq('is_deleted', false),
+      supabase
+        .from('project_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId),
+    ])
+
+    // Ответ пришёл уже для другого проекта — игнорируем
+    if (tabsCounts.value.projectId !== projectId) return
+    // Ошибка не фатальна: бейджи просто останутся пустыми
+    if (reportsRes.error || membersRes.error) return
+
+    tabsCounts.value = {
+      projectId,
+      reports: reportsRes.count ?? 0,
+      members: membersRes.count ?? 0,
+    }
+  }
+
   async function fetchAllProfiles(): Promise<ProfileSummary[]> {
     const { data, error: fetchError } = await supabase
       .from('profiles')
@@ -861,6 +896,7 @@ export const useProjectsStore = defineStore('projects', () => {
     bugs.value = []
     bugsProjectId.value = null
     bugsLoading.value = false
+    tabsCounts.value = { projectId: null, reports: null, members: null }
   }
 
   function clearError() {
@@ -874,6 +910,7 @@ export const useProjectsStore = defineStore('projects', () => {
     bugs,
     bugsProjectId,
     bugsLoading,
+    tabsCounts,
     currentBug,
     comments,
     commentsLoading,
@@ -900,6 +937,7 @@ export const useProjectsStore = defineStore('projects', () => {
     fetchReportsByBug,
     updateReport,
     fetchProjectMembers,
+    fetchTabsCounts,
     fetchMyProjectIds,
     fetchMyProjects,
     fetchAllProfiles,

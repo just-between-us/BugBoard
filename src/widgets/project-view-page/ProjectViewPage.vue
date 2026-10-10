@@ -45,7 +45,11 @@ async function loadProject() {
   try {
     await projectsStore.fetchProject(id)
     // Баги и вкладки не-участнику не показываются — запрос не нужен
-    if (isMember.value) await projectsStore.fetchBugs(id)
+    if (isMember.value) {
+      await projectsStore.fetchBugs(id)
+      // Счётчики для бейджей вкладок — отдельно, их ошибка не должна ронять страницу
+      void projectsStore.fetchTabsCounts(id)
+    }
   } catch {
     router.push({ name: 'projects' })
   }
@@ -97,10 +101,11 @@ watch(
           v-else-if="activeTab === 'reports'"
           :project-id="projectId"
           :is-member="isMember"
+          embedded
         />
 
         <!-- Stats (только для участников: вкладки рендерятся только в их ветке) -->
-        <ProjectStats v-else-if="activeTab === 'stats'" :project-id="projectId" />
+        <ProjectStats v-else-if="activeTab === 'stats'" :project-id="projectId" embedded />
 
         <ProjectSettings v-else-if="activeTab === 'settings'" :project-id="projectId" />
       </template>

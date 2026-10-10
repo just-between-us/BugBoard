@@ -6,7 +6,6 @@ import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { toUserError } from '@/lib/format'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/avatar'
 import {
   DropdownMenu,
@@ -79,6 +78,7 @@ async function addMember(userId: string) {
   try {
     await projectsStore.addProjectMember(props.projectId, userId)
     await load()
+    void projectsStore.fetchTabsCounts(props.projectId)
   } catch (e) {
     addError.value = toUserError(e)
   } finally {
@@ -104,6 +104,7 @@ async function confirmDelete() {
     await projectsStore.removeProjectMember(deleteTarget.value.id)
     closeDelete()
     await load()
+    void projectsStore.fetchTabsCounts(props.projectId)
   } catch (e) {
     deleteError.value = toUserError(e)
   } finally {
@@ -122,15 +123,12 @@ watch(
 
 <template>
   <div class="space-y-4">
-    <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h3 class="flex items-center gap-2 text-lg font-medium">
-        <Users class="h-5 w-5 text-muted-foreground" />
-        Участники
-        <Badge v-if="!loading && !error" variant="secondary">{{ members.length }}</Badge>
-      </h3>
-
-      <DropdownMenu v-if="isOwner && candidateProfiles.length > 0">
+    <!-- Header: заголовок дублирует вкладку/раздел — остаётся только действие -->
+    <div
+      v-if="isOwner && candidateProfiles.length > 0"
+      class="flex flex-wrap items-center justify-end gap-3"
+    >
+      <DropdownMenu>
         <DropdownMenuTrigger
           :class="cn(buttonVariants({ variant: 'outline' }), 'gap-1.5')"
           :disabled="adding"

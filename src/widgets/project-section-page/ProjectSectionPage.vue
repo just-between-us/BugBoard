@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
+import { Badge } from '@/components/ui/badge'
 import ProjectBugs from '@/widgets/project-bugs/ProjectBugs.vue'
 import ProjectReports from '@/widgets/project-reports/ProjectReports.vue'
 import ProjectMembers from '@/widgets/project-members/ProjectMembers.vue'
@@ -32,6 +33,15 @@ const sectionLabels: Record<Section, string> = {
   settings: 'Настройки',
 }
 
+// Счётчик в заголовке — только для разделов, где он был частью шапки виджета
+const sectionCount = computed(() => {
+  if (props.section !== 'members' && props.section !== 'reports') return null
+  if (projectsStore.tabsCounts.projectId !== projectId.value) return null
+  return props.section === 'members'
+    ? projectsStore.tabsCounts.members
+    : projectsStore.tabsCounts.reports
+})
+
 let loadSeq = 0
 
 async function load() {
@@ -55,6 +65,11 @@ async function load() {
   } catch {
     if (seq === loadSeq) router.replace({ name: 'projects' })
     return
+  }
+
+  // Счётчик для заголовка; ошибка не должна блокировать раздел
+  if (props.section === 'members' || props.section === 'reports') {
+    void projectsStore.fetchTabsCounts(id)
   }
 
   if (seq === loadSeq) ready.value = true
@@ -83,6 +98,9 @@ watch(projectId, load, { immediate: true })
         <span class="text-sm font-normal text-muted-foreground">
           / {{ sectionLabels[props.section] }}
         </span>
+        <Badge v-if="sectionCount !== null && sectionCount > 0" variant="secondary">
+          {{ sectionCount }}
+        </Badge>
       </h1>
 
       <ProjectBugs v-if="props.section === 'bugs'" :project-id="projectId" />
@@ -91,6 +109,7 @@ watch(projectId, load, { immediate: true })
         v-else-if="props.section === 'reports'"
         :project-id="projectId"
         :is-member="true"
+        embedded
       />
 
       <ProjectMembers v-else-if="props.section === 'members'" :project-id="projectId" />
