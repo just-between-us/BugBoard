@@ -1,0 +1,1 @@
+import{b as e,gt as t,j as n}from"./pinia-DQpmD-q9.js";import{t as r}from"./ProjectSectionPage-BIhI29ia.js";var i=n({__name:`ProjectBugsView`,setup(n){return(n,i)=>(t(),e(r,{section:`bugs`}))}});export{i as default};
