@@ -1,28 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
 import BugsFilters from '@/widgets/bugs-filters/BugsFilters.vue'
 import BugList from '@/widgets/bug-list/BugList.vue'
-import CreateBugDialog from '@/widgets/create-bug-dialog/CreateBugDialog.vue'
 
 interface Props {
   projectId: string
 }
 
-interface CreateBugInput {
-  project_id: string
-  title: string
-  description?: string
-  status: 'discovered' | 'confirmed' | 'in_progress' | 'fixed'
-  area: 'database' | 'ui' | 'auth' | 'api' | 'performance' | 'other'
-  severity: 'critical' | 'major' | 'minor'
-}
-
 const props = defineProps<Props>()
 
+const router = useRouter()
 const projectsStore = useProjectsStore()
-
-const isCreateBugOpen = ref(false)
 
 const searchQuery = ref('')
 const statusFilter = ref<string>('all')
@@ -86,16 +76,8 @@ const filteredBugs = computed(() => {
   return bugs
 })
 
-async function handleCreateBug(input: CreateBugInput) {
-  await projectsStore.createBug(input)
-}
-
 function openCreateBug() {
-  isCreateBugOpen.value = true
-}
-
-function closeCreateBug() {
-  isCreateBugOpen.value = false
+  void router.push({ name: 'bug-create', params: { projectId: props.projectId } })
 }
 
 function toggleSortOrder() {
@@ -160,13 +142,5 @@ watch(() => props.projectId, ensureBugsLoaded, { immediate: true })
     :areaFilter="areaFilter"
     @retry="projectsStore.fetchBugs(projectId)"
     @clearFilters="clearAllFilters"
-  />
-
-  <CreateBugDialog
-    :isOpen="isCreateBugOpen"
-    :submitting="projectsStore.loading"
-    :projectId="projectId"
-    @close="closeCreateBug"
-    @submit="handleCreateBug"
   />
 </template>

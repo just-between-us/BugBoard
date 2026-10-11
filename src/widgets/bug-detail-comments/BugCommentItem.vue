@@ -61,17 +61,19 @@ watch(
   <article class="flex gap-3">
     <Avatar class="h-8 w-8 text-xs" :name="authorName" :src="authorAvatar" />
     <div class="min-w-0 flex-1">
-      <div class="flex flex-wrap items-baseline gap-2">
-        <RouterLink
-          :to="{ name: 'user-profile', params: { userId: comment.author_id } }"
-          class="truncate text-sm font-medium underline-offset-4 hover:underline"
-        >
-          {{ authorName }}
-        </RouterLink>
-        <span class="text-xs text-muted-foreground">
-          {{ formatDate(comment.created_at) }}
-        </span>
-        <span v-if="isEdited" class="text-xs text-muted-foreground"> (изменён) </span>
+      <div class="flex">
+        <div class="flex flex-wrap items-baseline gap-2">
+          <RouterLink
+            :to="{ name: 'user-profile', params: { userId: comment.author_id } }"
+            class="truncate text-sm font-medium underline-offset-4 hover:underline"
+          >
+            {{ authorName }}
+          </RouterLink>
+          <span class="text-xs text-muted-foreground">
+            {{ formatDate(comment.created_at) }}
+          </span>
+          <span v-if="isEdited" class="text-xs text-muted-foreground"> (изменён) </span>
+        </div>
 
         <DropdownMenu v-if="isAuthor">
           <DropdownMenuTrigger
@@ -102,43 +104,6 @@ watch(
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-
-      <div
-        v-if="confirmDelete"
-        class="mt-2 rounded-md border border-severity-critical/40 bg-severity-critical/5 p-3"
-        role="alertdialog"
-        aria-label="Подтверждение удаления комментария"
-      >
-        <p class="text-sm font-medium">Удалить комментарий?</p>
-        <p class="mt-1 text-xs text-muted-foreground">
-          Комментарий будет скрыт у всех участников. Отменить действие нельзя.
-        </p>
-        <p v-if="actionError" class="mt-1 text-xs text-severity-critical">
-          {{ actionError }}
-        </p>
-        <div class="mt-2 flex flex-wrap gap-1.5">
-          <Button
-            size="sm"
-            variant="destructive"
-            class="h-8"
-            :disabled="deleteSaving"
-            @click="emit('confirm-delete')"
-          >
-            <Loader2 v-if="deleteSaving" class="h-4 w-4 animate-spin" />
-            <Trash2 v-else class="h-4 w-4" />
-            {{ deleteSaving ? 'Удаляем…' : 'Удалить' }}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            class="h-8"
-            :disabled="deleteSaving"
-            @click="emit('cancel-delete')"
-          >
-            Отмена
-          </Button>
-        </div>
       </div>
 
       <template v-if="editing">
@@ -185,4 +150,40 @@ watch(
       </p>
     </div>
   </article>
+  <div
+    v-if="confirmDelete"
+    class="mt-2 rounded-md border border-severity-critical/40 bg-severity-critical/5 p-3"
+    role="alertdialog"
+    aria-label="Подтверждение удаления комментария"
+  >
+    <p class="text-sm font-medium">Удалить комментарий?</p>
+    <p class="mt-1 text-xs text-muted-foreground">
+      Комментарий будет скрыт у всех участников. Отменить действие нельзя.
+    </p>
+    <p v-if="actionError" class="mt-1 text-xs text-severity-critical">
+      {{ actionError }}
+    </p>
+    <div class="mt-2 flex flex-wrap justify-between gap-1.5">
+      <Button
+        size="sm"
+        variant="destructive"
+        class="h-8"
+        :disabled="deleteSaving"
+        @click="emit('confirm-delete')"
+      >
+        <Loader2 v-if="deleteSaving" class="h-4 w-4 animate-spin" />
+        <Trash2 v-else class="h-4 w-4" />
+        {{ deleteSaving ? 'Удаляем…' : 'Удалить' }}
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        class="h-8"
+        :disabled="deleteSaving"
+        @click="emit('cancel-delete')"
+      >
+        Отмена
+      </Button>
+    </div>
+  </div>
 </template>

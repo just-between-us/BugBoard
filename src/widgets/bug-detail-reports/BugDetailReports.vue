@@ -12,7 +12,7 @@ import {
 } from '@lucide/vue'
 import type { Bug, Report } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
-import { formatDate, toUserError } from '@/lib/format'
+import { shortFormatDate, toUserError } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useMediaQuery } from '@vueuse/core'
 import { REPORT_STATUS_BADGE, reportStatusLabel, reportStatusOptions } from '@/entities/report'
 
 interface Props {
@@ -47,6 +48,8 @@ const statusFilter = ref<'all' | Report['status']>('all')
 const hasActiveFilters = computed(
   () => searchQuery.value.trim() !== '' || statusFilter.value !== 'all',
 )
+
+const isMobile = useMediaQuery('(max-width: 640px)')
 
 function matches(report: Report): boolean {
   const query = searchQuery.value.trim().toLowerCase()
@@ -137,7 +140,6 @@ watch(
         <Badge variant="secondary">{{ linked.length }}</Badge>
       </div>
 
-      <!-- Filters -->
       <div
         v-if="!loading && !loadError && (linked.length > 0 || unlinked.length > 0)"
         class="flex flex-wrap items-center gap-2"
@@ -162,9 +164,8 @@ watch(
             <X class="h-4 w-4" />
           </Button>
         </div>
-
         <Select v-model="statusFilter">
-          <SelectTrigger class="h-8 w-36">
+          <SelectTrigger class="h-8 w-36 sm:ml-auto">
             <SelectValue placeholder="Статус" />
           </SelectTrigger>
           <SelectContent>
@@ -177,25 +178,23 @@ watch(
 
         <Button
           v-if="hasActiveFilters"
-          variant="ghost"
+          variant="destructive"
           size="sm"
-          class="h-8 gap-1 px-2 text-xs"
+          class="h-8 gap-1 px-2 text-xs ml-auto sm:ml-0"
           @click="clearFilters"
         >
           <X class="h-3.5 w-3.5" />
-          Сбросить
+          <span v-if="!isMobile">Сбросить</span>
         </Button>
       </div>
 
       <p v-if="actionError" class="text-sm text-severity-critical">{{ actionError }}</p>
 
-      <!-- Loading -->
       <div v-if="loading" class="space-y-2" role="status" aria-label="Загрузка репортов">
         <div v-for="i in 2" :key="i" class="h-10 animate-pulse rounded-md border bg-muted/40" />
         <span class="sr-only">Загрузка репортов…</span>
       </div>
 
-      <!-- Error -->
       <div
         v-else-if="loadError"
         class="rounded-md border border-severity-critical/20 bg-severity-critical/5 p-3"
@@ -208,7 +207,6 @@ watch(
       </div>
 
       <template v-else>
-        <!-- Nothing to show -->
         <div
           v-if="linked.length === 0 && unlinked.length === 0"
           class="rounded-md border border-dashed px-6 py-8 text-center"
@@ -222,7 +220,6 @@ watch(
         </div>
 
         <template v-else>
-          <!-- Linked to this bug -->
           <div class="space-y-2">
             <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Привязано
@@ -249,35 +246,36 @@ watch(
               >
                 <RouterLink
                   :to="{ name: 'report-view', params: { reportId: report.id } }"
-                  class="min-w-0 flex-1 truncate text-sm font-medium underline-offset-4 hover:underline"
+                  class="min-w-10 flex-1 truncate text-sm font-medium underline-offset-4 hover:underline"
                 >
                   {{ report.title }}
                 </RouterLink>
-                <Badge
-                  :class="REPORT_STATUS_BADGE[report.status]"
-                  class="shrink-0 text-xs font-medium"
-                >
-                  {{ reportStatusLabel(report.status) }}
-                </Badge>
-                <span class="shrink-0 text-xs text-muted-foreground">
-                  {{ formatDate(report.created_at) }}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  class="h-7 shrink-0 gap-1 px-2 text-xs"
-                  :disabled="savingId === report.id"
-                  @click="detach(report)"
-                >
-                  <Loader2 v-if="savingId === report.id" class="h-3.5 w-3.5 animate-spin" />
-                  <Unlink v-else class="h-3.5 w-3.5" />
-                  Отвязать
-                </Button>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+                  <Badge
+                    :class="REPORT_STATUS_BADGE[report.status]"
+                    class="shrink-0 text-xs font-medium"
+                  >
+                    {{ reportStatusLabel(report.status) }}
+                  </Badge>
+                  <span class="shrink-0 text-xs text-muted-foreground">
+                    {{ shortFormatDate(report.created_at) }}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    class="h-7 shrink-0 gap-1 px-2 text-xs"
+                    :disabled="savingId === report.id"
+                    @click="detach(report)"
+                  >
+                    <Loader2 v-if="savingId === report.id" class="h-3.5 w-3.5 animate-spin" />
+                    <Unlink v-else class="h-3.5 w-3.5" />
+                    Отвязать
+                  </Button>
+                </div>
               </li>
             </ul>
           </div>
 
-          <!-- Free reports -->
           <div class="space-y-2">
             <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Можно привязать
@@ -300,34 +298,36 @@ watch(
               <li
                 v-for="report in filteredUnlinked"
                 :key="report.id"
-                class="flex flex-wrap items-center gap-2 rounded-md border p-2"
+                class="flex flex-wrap justify-between items-center gap-2 rounded-md border p-2"
               >
                 <RouterLink
                   :to="{ name: 'report-view', params: { reportId: report.id } }"
-                  class="min-w-0 flex-1 truncate text-sm font-medium underline-offset-4 hover:underline"
+                  class="min-w-10 flex-1 truncate text-sm font-medium underline-offset-4 hover:underline"
                 >
                   {{ report.title }}
                 </RouterLink>
-                <Badge
-                  :class="REPORT_STATUS_BADGE[report.status]"
-                  class="shrink-0 text-xs font-medium"
-                >
-                  {{ reportStatusLabel(report.status) }}
-                </Badge>
-                <span class="shrink-0 text-xs text-muted-foreground">
-                  {{ formatDate(report.created_at) }}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  class="h-7 shrink-0 gap-1 px-2 text-xs"
-                  :disabled="savingId === report.id"
-                  @click="attach(report)"
-                >
-                  <Loader2 v-if="savingId === report.id" class="h-3.5 w-3.5 animate-spin" />
-                  <Link2 v-else class="h-3.5 w-3.5" />
-                  Привязать
-                </Button>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+                  <Badge
+                    :class="REPORT_STATUS_BADGE[report.status]"
+                    class="shrink-0 text-xs font-medium"
+                  >
+                    {{ reportStatusLabel(report.status) }}
+                  </Badge>
+                  <span class="shrink-0 text-xs text-muted-foreground">
+                    {{ shortFormatDate(report.created_at) }}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    class="h-7 shrink-0 gap-1 px-2 text-xs"
+                    :disabled="savingId === report.id"
+                    @click="attach(report)"
+                  >
+                    <Loader2 v-if="savingId === report.id" class="h-3.5 w-3.5 animate-spin" />
+                    <Link2 v-else class="h-3.5 w-3.5" />
+                    Привязать
+                  </Button>
+                </div>
               </li>
             </ul>
           </div>

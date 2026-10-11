@@ -38,18 +38,15 @@ const emit = defineEmits<{
   'open-create-bug': []
 }>()
 
-const { scroller, scrolledStart, scrolledEnd, updateEdges } = useScrollEdges()
+const { scrolledStart, scrolledEnd, updateEdges } = useScrollEdges()
 
 const isMobile = useMediaQuery('(max-width: 640px)')
-// Панель (создание/фильтры/сортировка) на мобиле скрыта по умолчанию и
-// открывается/закрывается только кнопкой-стрелкой; на десктопе всегда видна
 const panelOpen = ref(false)
 
 function togglePanel() {
   panelOpen.value = !panelOpen.value
 }
 
-// «Особая» сортировка = не по умолчанию (дата создания / по убыванию)
 const isSortCustom = computed(() => props.sortBy !== 'created_at' || props.sortOrder !== 'desc')
 
 const statusOptions = [
@@ -98,7 +95,6 @@ const sortFieldLabel = computed(
 )
 const sortDirSymbol = computed(() => (props.sortOrder === 'asc' ? '↑' : '↓'))
 
-// Тонкие подсказки активных фильтров для свёрнутого состояния
 const activeFilterChips = computed(() => {
   const chips: { key: string; label: string; onRemove: () => void }[] = []
   if (props.statusFilter !== 'all')
@@ -126,9 +122,7 @@ const activeStateCount = computed(
   () => activeFilterChips.value.length + (isSortCustom.value ? 1 : 0),
 )
 
-// Кнопка-стрелка — только на мобиле (на десктопе панель всегда видна)
 const showToggleBtn = computed(() => isMobile.value)
-// Ряд подсказок — на мобиле, когда панель закрыта и есть что показать
 const showCollapsedHints = computed(
   () => isMobile.value && !panelOpen.value && activeStateCount.value > 0,
 )
@@ -165,8 +159,6 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
 
 <template>
   <div class="space-y-2 py-2">
-    <!-- Строка поиска — всегда видна; на десктопе рядом кнопка создания,
-         на мобиле в свёрнутом состоянии — «⋯» для разворота панели -->
     <div class="flex items-center gap-2">
       <div class="relative min-w-0 flex-1">
         <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -212,7 +204,6 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
       </Button>
     </div>
 
-    <!-- Тонкие подсказки активного состояния (мобиле, свёрнуто) -->
     <div v-if="showCollapsedHints" class="scroll-x-fade flex items-center gap-1.5 overflow-x-auto">
       <span
         v-for="chip in activeFilterChips"
@@ -247,18 +238,12 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
       </span>
     </div>
 
-    <!-- Панель: создание + фильтры + сортировка. На десктопе всегда видна;
-         на мобиле открывается/закрывается только кнопкой-стрелкой -->
     <div v-show="!isMobile || panelOpen" class="space-y-2">
-      <!-- Мобильные: кнопка создания во всю ширину -->
       <Button class="w-full sm:hidden" @click="emit('open-create-bug')">
         <Plus class="h-4 w-4 mr-2" />
         Создать баг
       </Button>
 
-      <!-- Фильтры + сброс + сортировка. На десктопе — одна строка: слева
-               скролл фильтров, справа «Сбросить всё» и группа сортировки. На
-               мобиле группа сортировки переносится во всю ширину -->
       <div class="flex flex-wrap items-center gap-2">
         <div
           ref="scroller"
@@ -376,8 +361,6 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
           <span class="hidden sm:inline">Сбросить всё</span>
         </Button>
 
-        <!-- Группа сортировки: на десктопе прижата вправо в той же строке,
-                 на мобиле занимает всю ширину отдельной строкой -->
         <ButtonGroup class="w-full shrink-0 sm:w-fit">
           <Select :model-value="props.sortBy" @update:modelValue="handleSortByUpdate">
             <SelectTrigger class="h-8 min-w-0 flex-1 sm:w-fit sm:flex-none" aria-label="Сортировка">

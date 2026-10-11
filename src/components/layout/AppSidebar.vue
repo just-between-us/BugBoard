@@ -120,7 +120,7 @@ function isSectionActive(section: Section): boolean {
   const project = activeProject.value
   if (!project || routeProjectId() !== project.id) return false
   if (route.name === sectionRoutes[section]) return true
-  if (route.name === 'bug-detail') return section === 'bugs'
+  if (route.name === 'bug-detail' || route.name === 'bug-create') return section === 'bugs'
   if (route.name === 'project') return projectPageSection() === section
   return false
 }
@@ -246,7 +246,6 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- Backdrop: mobile / tablet overlay only -->
   <div
     v-if="props.open"
     class="fixed inset-0 z-40 bg-black/50 md:hidden"
@@ -254,7 +253,6 @@ onBeforeUnmount(() => {
     @click="emit('update:open', false)"
   />
 
-  <!-- Sidebar: in-flow sticky on desktop, absolute overlay below md -->
   <aside
     class="sticky top-0 flex h-screen w-56 flex-col justify-between border-r border-border bg-background transition-all duration-200 max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50"
     :class="[

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { Bug as BugIcon, Check, ChevronsUpDown, Eye, Loader2, Reply, Trash2 } from '@lucide/vue'
+import { Bug as BugIcon, Check, ChevronsUpDown, Loader2, Reply, Trash2 } from '@lucide/vue'
 import type { Report } from '@/stores/projects'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -79,7 +79,6 @@ function openBug() {
     @click="goToReport"
   >
     <CardContent class="space-y-3 p-4 sm:p-5">
-      <!-- Reporter meta + status -->
       <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div class="flex min-w-0 items-center gap-2.5">
           <Avatar
@@ -117,7 +116,6 @@ function openBug() {
 
         <div class="flex flex-wrap items-center gap-1.5 self-start" @click.stop>
           <template v-if="props.isMember">
-            <!-- Status -->
             <DropdownMenu>
               <DropdownMenuTrigger
                 :class="cn(buttonVariants({ variant: 'outline' }), 'h-7 gap-1.5 px-2 text-xs')"
@@ -147,7 +145,6 @@ function openBug() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <!-- Flag -->
             <DropdownMenu>
               <DropdownMenuTrigger
                 :class="cn(buttonVariants({ variant: 'outline' }), 'h-7 gap-1.5 px-2 text-xs')"
@@ -176,7 +173,6 @@ function openBug() {
             <Loader2 v-if="props.saving" class="h-4 w-4 animate-spin text-muted-foreground" />
           </template>
 
-          <!-- Репортёр видит статус только для чтения -->
           <Badge
             v-else
             :class="REPORT_STATUS_BADGE[props.report.status]"
@@ -187,7 +183,6 @@ function openBug() {
         </div>
       </div>
 
-      <!-- Title / description -->
       <div>
         <RouterLink
           :to="reportRoute()"
@@ -201,7 +196,6 @@ function openBug() {
         </p>
       </div>
 
-      <!-- Привязка к багу (только команда: баг как сущность репортёру не показывается) -->
       <div v-if="props.isMember && props.report.bug_id" class="flex flex-wrap items-center gap-1.5">
         <button
           v-if="props.bugTitle"
@@ -223,7 +217,6 @@ function openBug() {
         </span>
       </div>
 
-      <!-- Reply editor (команда) -->
       <div
         v-if="props.replyOpen"
         class="space-y-2 rounded-md border p-3"
@@ -261,7 +254,6 @@ function openBug() {
         </div>
       </div>
 
-      <!-- Reply display -->
       <div
         v-else-if="props.report.reply"
         class="rounded-md border border-primary/30 bg-primary/5 p-3"
@@ -291,7 +283,6 @@ function openBug() {
         </div>
       </div>
 
-      <!-- Bottom actions (команда) -->
       <div
         v-if="props.isMember"
         class="flex flex-wrap items-center justify-between gap-2"
@@ -311,7 +302,11 @@ function openBug() {
             <span class="hidden sm:inline">Ответить репортёру</span>
           </Button>
           <RouterLink
-            :to="reportRoute()"
+            :to="{
+              name: 'bug-create',
+              params: { projectId: props.report.project_id },
+              query: { report: props.report.id },
+            }"
             :class="
               cn(
                 buttonVariants({ variant: 'ghost' }),
@@ -319,8 +314,8 @@ function openBug() {
               )
             "
           >
-            <Eye class="h-3.5 w-3.5" />
-            Детали
+            <BugIcon class="h-3.5 w-3.5" />
+            Баг
           </RouterLink>
         </div>
         <Button

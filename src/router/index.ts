@@ -78,6 +78,12 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'projects/:projectId/bugs/new',
+          name: 'bug-create',
+          component: () => import('@/views/BugCreateView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'projects/:projectId/bugs/:bugId',
           name: 'bug-detail',
           component: () => import('@/views/BugDetailView.vue'),

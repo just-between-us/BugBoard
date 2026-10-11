@@ -294,7 +294,7 @@ async function handleDelete() {
         <CardDescription>JPG, PNG или WebP, ≤ 2 МБ — как в шапке проекта и списках</CardDescription>
       </CardHeader>
       <CardContent>
-        <div class="flex items-center gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
           <Avatar class="h-16 w-16 text-xl" :name="project.name" :src="project.avatar_url" />
           <div class="space-y-1.5">
             <input
@@ -316,7 +316,7 @@ async function handleDelete() {
               </Button>
               <Button
                 v-if="project.avatar_url"
-                variant="outline"
+                variant="destructive"
                 :disabled="avatarUploading || avatarRemoving"
                 @click="removeAvatar"
               >
@@ -438,7 +438,6 @@ async function handleDelete() {
         </CardAction>
       </CardHeader>
 
-      <!-- Мобильная версия опасной зоны -->
       <CardContent class="space-y-3 sm:hidden">
         <div class="flex justify-end">
           <Button
@@ -453,7 +452,9 @@ async function handleDelete() {
         </div>
 
         <div v-if="deleteCountdownActive" class="flex items-center justify-end gap-2">
-          <p class="text-sm text-severity-critical">Удаление через {{ deleteSecondsLeft }} с</p>
+          <p class="hidden sm:block text-sm text-severity-critical">
+            Удаление через {{ deleteSecondsLeft }} с
+          </p>
           <Progress
             :model-value="deleteProgress"
             class="h-1.5 w-20 shrink-0 bg-muted **:data-[slot=progress-indicator]:bg-severity-critical"
@@ -471,7 +472,6 @@ async function handleDelete() {
         <p v-if="deleteError" class="text-sm text-severity-critical">{{ deleteError }}</p>
       </CardContent>
 
-      <!-- Десктоп: прогресс на всю ширину внизу + ошибка -->
       <CardContent v-if="deleteCountdownActive || deleteError" class="hidden space-y-3 sm:block">
         <Progress
           v-if="deleteCountdownActive"

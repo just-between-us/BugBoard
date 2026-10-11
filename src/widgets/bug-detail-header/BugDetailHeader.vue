@@ -88,7 +88,7 @@ async function confirmEditTitle() {
 
 <template>
   <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start">
-    <div class="flex min-w-0 flex-1 items-start gap-4">
+    <div class="flex flex-col sm:flex-row min-w-0 flex-1 items-start gap-4">
       <div
         class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white"
         :class="SEVERITY_BG[bug.severity] ?? 'bg-muted'"

@@ -8,6 +8,12 @@ export function formatDate(dateString: string) {
   })
 }
 
+export function shortFormatDate(dateString: string) {
+  const d = new Date(dateString)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${String(d.getFullYear()).slice(-2)}`
+}
+
 export function formatDateOnly(dateString: string) {
   return new Date(dateString).toLocaleDateString('ru-RU', {
     day: 'numeric',
