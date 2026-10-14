@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import { DateRangePicker } from '@/components/date-range-picker'
+import { dateRangeLabel } from '@/lib/dateRange'
 import { useScrollEdges } from '@/lib/useScrollEdges'
 
 interface Props {
@@ -20,6 +22,8 @@ interface Props {
   statusFilter: string
   severityFilter: string
   areaFilter: string
+  dateFrom: string | null
+  dateTo: string | null
   sortBy: 'created_at' | 'severity' | 'status' | 'title'
   sortOrder: 'asc' | 'desc'
   hasActiveFilters: boolean
@@ -32,6 +36,8 @@ const emit = defineEmits<{
   'update:statusFilter': [filter: string]
   'update:severityFilter': [filter: string]
   'update:areaFilter': [filter: string]
+  'update:dateFrom': [value: string | null]
+  'update:dateTo': [value: string | null]
   'update:sortBy': [sortBy: 'created_at' | 'severity' | 'status' | 'title']
   toggleSortOrder: []
   clearAllFilters: []
@@ -114,6 +120,15 @@ const activeFilterChips = computed(() => {
       key: 'area',
       label: getAreaLabel(props.areaFilter),
       onRemove: () => handleAreaFilterUpdate('all'),
+    })
+  if (props.dateFrom || props.dateTo)
+    chips.push({
+      key: 'date',
+      label: dateRangeLabel({ from: props.dateFrom, to: props.dateTo }) ?? 'Период',
+      onRemove: () => {
+        emit('update:dateFrom', null)
+        emit('update:dateTo', null)
+      },
     })
   return chips
 })
@@ -346,6 +361,14 @@ function handleSortByUpdate(sortBy: 'created_at' | 'severity' | 'status' | 'titl
                 </SelectContent>
               </Select>
             </div>
+
+            <DateRangePicker
+              class="shrink-0"
+              :from="props.dateFrom"
+              :to="props.dateTo"
+              @update:from="emit('update:dateFrom', $event)"
+              @update:to="emit('update:dateTo', $event)"
+            />
           </div>
         </div>
 

@@ -58,7 +58,7 @@ onBeforeUnmount(() => {
   <span class="relative inline-flex">
     <button
       type="button"
-      class="inline-flex items-center justify-center rounded p-0.5 text-muted-foreground transition-colors duration-300 ease-out hover:text-foreground"
+      class="inline-flex items-center justify-center rounded p-0.5 text-muted-foreground transition-colors duration-300 ease-out hover:text-foreground cursor-pointer"
       :class="compactMode && copied ? 'bg-emerald-500/15' : ''"
       :title="label"
       :aria-label="label"
@@ -75,7 +75,7 @@ onBeforeUnmount(() => {
     <Transition name="copy-feedback">
       <span
         v-if="copied && !compactMode"
-        class="absolute bottom-full left-1/2 z-10 mb-1.5 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded bg-green-600 px-2 py-0.5 text-xs text-white shadow-sm"
+        class="absolute bottom-full left-1/2 z-10 mb-1.5 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded bg-green-600 px-2 py-0.5 text-xs text-white shadow-sm cursor-pointer"
       >
         {{ feedback }} <Check :class="iconClass" />
       </span>

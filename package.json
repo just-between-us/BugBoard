@@ -16,6 +16,7 @@
     "deploy": "npm run build && node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\" && gh-pages -d dist --dotfiles --nojekyll -m \"deploy\""
   },
   "dependencies": {
+    "@internationalized/date": "^3.12.4",
     "@lucide/vue": "^1.54.0",
     "@supabase/supabase-js": "^2.117.2",
     "@tailwindcss/vite": "^4.3.3",

@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DateRangePicker } from '@/components/date-range-picker'
 import { reportStatusLabel, reportStatusOptions } from '@/entities/report'
+import { dateRangeLabel } from '@/lib/dateRange'
 import { useScrollEdges } from '@/lib/useScrollEdges'
 
 type SortBy = 'created_at' | 'updated_at' | 'manual'
@@ -20,6 +22,10 @@ type SortBy = 'created_at' | 'updated_at' | 'manual'
 interface Props {
   statusFilter: 'all' | Report['status']
   bugFilter: 'all' | 'linked' | 'unlinked'
+  replyFilter: 'all' | 'with' | 'without'
+  flagFilter: 'all' | Report['flag']
+  dateFrom: string | null
+  dateTo: string | null
   sortBy: SortBy
   sortOrder: 'asc' | 'desc'
   isMember: boolean
@@ -32,6 +38,10 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:statusFilter': [filter: 'all' | Report['status']]
   'update:bugFilter': [filter: 'all' | 'linked' | 'unlinked']
+  'update:replyFilter': [filter: 'all' | 'with' | 'without']
+  'update:flagFilter': [filter: 'all' | Report['flag']]
+  'update:dateFrom': [value: string | null]
+  'update:dateTo': [value: string | null]
   'update:sortBy': [sortBy: SortBy]
   toggleSortOrder: []
   clearAllFilters: []
@@ -46,6 +56,30 @@ const sortOptions = [
   { value: 'updated_at', label: 'Дата обновления' },
   { value: 'manual', label: 'Вручную' },
 ] as const
+
+const replyOptions = [
+  { value: 'all', label: 'Все' },
+  { value: 'with', label: 'С ответом' },
+  { value: 'without', label: 'Без ответа' },
+] as const
+
+const flagOptions = [
+  { value: 'all', label: 'Все флаги' },
+  { value: 'spam', label: 'Спам' },
+  { value: 'duplicate', label: 'Дубликат' },
+  { value: 'none', label: 'Без флага' },
+] as const
+
+const replyLabels: Record<'with' | 'without', string> = {
+  with: 'С ответом',
+  without: 'Без ответа',
+}
+
+const flagLabels: Record<Exclude<(typeof flagOptions)[number]['value'], 'all'>, string> = {
+  spam: 'Спам',
+  duplicate: 'Дубликат',
+  none: 'Без флага',
+}
 
 // Ручной порядок доступен только участникам — только они могут перетаскивать
 const visibleSortOptions = computed(() =>
@@ -75,6 +109,27 @@ const activeFilterChips = computed(() => {
       label: props.bugFilter === 'linked' ? 'Привязаны к багу' : 'Без привязки',
       onRemove: () => emit('update:bugFilter', 'all'),
     })
+  if (props.replyFilter !== 'all')
+    chips.push({
+      key: 'reply',
+      label: replyLabels[props.replyFilter],
+      onRemove: () => emit('update:replyFilter', 'all'),
+    })
+  if (props.flagFilter !== 'all')
+    chips.push({
+      key: 'flag',
+      label: flagLabels[props.flagFilter],
+      onRemove: () => emit('update:flagFilter', 'all'),
+    })
+  if (props.dateFrom || props.dateTo)
+    chips.push({
+      key: 'date',
+      label: dateRangeLabel({ from: props.dateFrom, to: props.dateTo }) ?? 'Период',
+      onRemove: () => {
+        emit('update:dateFrom', null)
+        emit('update:dateTo', null)
+      },
+    })
   return chips
 })
 
@@ -99,6 +154,14 @@ function handleStatusFilterUpdate(filter: string) {
 
 function handleBugFilterUpdate(filter: string) {
   emit('update:bugFilter', filter as 'all' | 'linked' | 'unlinked')
+}
+
+function handleReplyFilterUpdate(filter: string) {
+  emit('update:replyFilter', filter as 'all' | 'with' | 'without')
+}
+
+function handleFlagFilterUpdate(filter: string) {
+  emit('update:flagFilter', filter as 'all' | Report['flag'])
 }
 
 function handleSortByUpdate(sortBy: string) {
@@ -211,6 +274,70 @@ function handleSortByUpdate(sortBy: string) {
               </SelectContent>
             </Select>
           </div>
+
+          <div
+            v-if="props.replyFilter !== 'all'"
+            class="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md"
+          >
+            <span class="text-sm font-medium">{{ replyLabels[props.replyFilter] }}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-6 w-6"
+              @click="emit('update:replyFilter', 'all')"
+              aria-label="Сбросить фильтр ответа"
+            >
+              <X class="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div v-else>
+            <Select :model-value="props.replyFilter" @update:modelValue="handleReplyFilterUpdate">
+              <SelectTrigger>
+                <SelectValue placeholder="Ответ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="opt in replyOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div
+            v-if="props.flagFilter !== 'all'"
+            class="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md"
+          >
+            <span class="text-sm font-medium">{{ flagLabels[props.flagFilter] }}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-6 w-6"
+              @click="emit('update:flagFilter', 'all')"
+              aria-label="Сбросить фильтр флага"
+            >
+              <X class="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div v-else>
+            <Select :model-value="props.flagFilter" @update:modelValue="handleFlagFilterUpdate">
+              <SelectTrigger>
+                <SelectValue placeholder="Флаг" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="opt in flagOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DateRangePicker
+            class="shrink-0"
+            :from="props.dateFrom"
+            :to="props.dateTo"
+            @update:from="emit('update:dateFrom', $event)"
+            @update:to="emit('update:dateTo', $event)"
+          />
         </div>
       </div>
 

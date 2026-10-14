@@ -5,6 +5,7 @@ import type { Bug, Report } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { toUserError } from '@/lib/format'
+import { isInRange } from '@/lib/dateRange'
 import { applyIdOrder, loadIdOrder, moveId, saveIdOrder } from '@/lib/localOrder'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +37,10 @@ const savingId = ref<string | null>(null)
 const searchQuery = ref('')
 const statusFilter = ref<'all' | Report['status']>('all')
 const bugFilter = ref<'all' | 'linked' | 'unlinked'>('all')
+const replyFilter = ref<'all' | 'with' | 'without'>('all')
+const flagFilter = ref<'all' | Report['flag']>('all')
+const dateFrom = ref<string | null>(null)
+const dateTo = ref<string | null>(null)
 const sortBy = ref<'created_at' | 'updated_at' | 'manual'>('created_at')
 const sortOrder = ref<'asc' | 'desc'>('desc')
 // Панель фильтров/сортировки на мобиле скрыта по умолчанию и переключается
@@ -83,6 +88,21 @@ const filteredReports = computed(() => {
     list = list.filter((r) => !r.bug_id)
   }
 
+  if (replyFilter.value === 'with') {
+    list = list.filter((r) => !!r.reply)
+  } else if (replyFilter.value === 'without') {
+    list = list.filter((r) => !r.reply)
+  }
+
+  if (flagFilter.value !== 'all') {
+    list = list.filter((r) => r.flag === flagFilter.value)
+  }
+
+  if (dateFrom.value || dateTo.value) {
+    const range = { from: dateFrom.value, to: dateTo.value }
+    list = list.filter((r) => isInRange(r.created_at, range))
+  }
+
   if (sortBy.value === 'manual') {
     return applyIdOrder(list, reportOrder.value, (r) => r.id)
   }
@@ -95,7 +115,14 @@ const filteredReports = computed(() => {
 })
 
 const hasActiveFilters = computed(
-  () => searchQuery.value !== '' || statusFilter.value !== 'all' || bugFilter.value !== 'all',
+  () =>
+    searchQuery.value !== '' ||
+    statusFilter.value !== 'all' ||
+    bugFilter.value !== 'all' ||
+    replyFilter.value !== 'all' ||
+    flagFilter.value !== 'all' ||
+    dateFrom.value !== null ||
+    dateTo.value !== null,
 )
 
 function toggleSortOrder() {
@@ -218,6 +245,10 @@ function clearFilters() {
   searchQuery.value = ''
   statusFilter.value = 'all'
   bugFilter.value = 'all'
+  replyFilter.value = 'all'
+  flagFilter.value = 'all'
+  dateFrom.value = null
+  dateTo.value = null
   sortBy.value = 'created_at'
   sortOrder.value = 'desc'
 }
@@ -379,6 +410,10 @@ onBeforeUnmount(() => {
       v-if="reports.length > 0"
       :statusFilter="statusFilter"
       :bugFilter="bugFilter"
+      :replyFilter="replyFilter"
+      :flagFilter="flagFilter"
+      :dateFrom="dateFrom"
+      :dateTo="dateTo"
       :sortBy="sortBy"
       :sortOrder="sortOrder"
       :isMember="isMember"
@@ -386,6 +421,10 @@ onBeforeUnmount(() => {
       :panelOpen="panelOpen"
       @update:statusFilter="statusFilter = $event"
       @update:bugFilter="bugFilter = $event"
+      @update:replyFilter="replyFilter = $event"
+      @update:flagFilter="flagFilter = $event"
+      @update:dateFrom="dateFrom = $event"
+      @update:dateTo="dateTo = $event"
       @update:sortBy="sortBy = $event"
       @toggleSortOrder="toggleSortOrder"
       @clearAllFilters="clearFilters"

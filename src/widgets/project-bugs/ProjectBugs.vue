@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { isInRange } from '@/lib/dateRange'
 import { useProjectsStore } from '@/stores/projects'
 import BugsFilters from '@/widgets/bugs-filters/BugsFilters.vue'
 import BugList from '@/widgets/bug-list/BugList.vue'
@@ -18,6 +19,8 @@ const searchQuery = ref('')
 const statusFilter = ref<string>('all')
 const severityFilter = ref<string>('all')
 const areaFilter = ref<string>('all')
+const dateFrom = ref<string | null>(null)
+const dateTo = ref<string | null>(null)
 const sortBy = ref<'created_at' | 'severity' | 'status' | 'title'>('created_at')
 const sortOrder = ref<'asc' | 'desc'>('desc')
 
@@ -48,6 +51,11 @@ const filteredBugs = computed(() => {
 
   if (areaFilter.value !== 'all') {
     bugs = bugs.filter((b) => b.area === areaFilter.value)
+  }
+
+  if (dateFrom.value || dateTo.value) {
+    const range = { from: dateFrom.value, to: dateTo.value }
+    bugs = bugs.filter((b) => isInRange(b.created_at, range))
   }
 
   bugs.sort((a, b) => {
@@ -89,6 +97,8 @@ function clearAllFilters() {
   statusFilter.value = 'all'
   severityFilter.value = 'all'
   areaFilter.value = 'all'
+  dateFrom.value = null
+  dateTo.value = null
   sortBy.value = 'created_at'
   sortOrder.value = 'desc'
 }
@@ -98,7 +108,9 @@ function hasActiveFilters(): boolean {
     searchQuery.value !== '' ||
     statusFilter.value !== 'all' ||
     severityFilter.value !== 'all' ||
-    areaFilter.value !== 'all'
+    areaFilter.value !== 'all' ||
+    dateFrom.value !== null ||
+    dateTo.value !== null
   )
 }
 
@@ -118,6 +130,8 @@ watch(() => props.projectId, ensureBugsLoaded, { immediate: true })
       :statusFilter="statusFilter"
       :severityFilter="severityFilter"
       :areaFilter="areaFilter"
+      :dateFrom="dateFrom"
+      :dateTo="dateTo"
       :sortBy="sortBy"
       :sortOrder="sortOrder"
       :hasActiveFilters="hasActiveFilters()"
@@ -125,6 +139,8 @@ watch(() => props.projectId, ensureBugsLoaded, { immediate: true })
       @update:statusFilter="statusFilter = $event"
       @update:severityFilter="severityFilter = $event"
       @update:areaFilter="areaFilter = $event"
+      @update:dateFrom="dateFrom = $event"
+      @update:dateTo="dateTo = $event"
       @update:sortBy="sortBy = $event"
       @toggleSortOrder="toggleSortOrder"
       @clearAllFilters="clearAllFilters"
