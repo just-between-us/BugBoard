@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { areaIcon, areaOptions, optionLabel } from '@/entities/bug/meta'
 import type { Bug } from '@/stores/projects'
-import { AREA_CHART_COLOR as AREA_COLORS, withAlpha } from './chart-colors'
+import { AREA_CHART_COLOR as AREA_COLORS, FALLBACK_COLOR, withAlpha } from './chart-colors'
 
 interface Props {
   bugs: Bug[]
@@ -42,7 +42,7 @@ const rows = computed<AreaRow[]>(() => {
       area,
       label: optionLabel(areaOptions, area),
       count,
-      fill: AREA_COLORS[area] ?? AREA_COLORS.other ?? '#94a3b8',
+      fill: AREA_COLORS[area] ?? AREA_COLORS.other ?? FALLBACK_COLOR,
     }))
     .sort((a, b) => b.count - a.count)
 })

@@ -48,10 +48,7 @@ const activeProjectStore = useActiveProjectStore()
 const isDesktop = ref(true)
 let mediaQuery: MediaQueryList | null = null
 
-const navItems = [
-  { label: 'Проекты', to: '/app', icon: FolderKanban },
-  { label: 'Настройки', to: '/app/settings', icon: Settings },
-]
+const navItems = [{ label: 'Проекты', to: '/app', icon: FolderKanban }]
 
 const sectionItems = [
   { section: 'bugs', label: 'Баги', icon: Bug },
@@ -136,7 +133,7 @@ function goToCreateProject() {
 
 const userName = computed(() => auth.profile?.display_name ?? auth.user?.email ?? '?')
 
-const profileLink = computed(() => (auth.user ? `/app/users/${auth.user.id}` : '/app/settings'))
+const profileLink = computed(() => (auth.user ? `/app/users/${auth.user.id}` : '/app'))
 
 function syncViewport() {
   isDesktop.value = mediaQuery?.matches ?? true
@@ -419,7 +416,7 @@ onBeforeUnmount(() => {
           v-if="!collapsed"
           variant="ghost"
           size="icon"
-          class="relative transition-colors"
+          class="relative transition-colors rounded-full"
           :class="
             signOutPending && 'text-destructive hover:bg-destructive/10 hover:text-destructive'
           "
@@ -446,7 +443,7 @@ onBeforeUnmount(() => {
                     cy="16"
                     :r="RING_RADIUS"
                     class="stroke-border"
-                    stroke-width="3"
+                    stroke-width="2"
                     stroke-opacity="0.7"
                   />
                   <circle

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar } from '@/components/avatar'
+import UserSettings from '@/widgets/user-settings/UserSettings.vue'
 import BugCard from '@/entities/bug-card/BugCard.vue'
 import ActivityHeatmap from '@/entities/activity-heatmap/ActivityHeatmap.vue'
 import ActivityFeed from '@/entities/activity-feed/ActivityFeed.vue'
@@ -77,6 +78,11 @@ async function load() {
     pageError.value = toUserError(e)
     state.value = 'error'
   }
+}
+
+async function refreshProfile() {
+  const fresh = await projectsStore.fetchProfileById(userId.value)
+  if (fresh) profile.value = fresh
 }
 
 async function loadBugs() {
@@ -184,32 +190,28 @@ watch(userId, load, { immediate: true })
 
     <!-- Ready -->
     <template v-else-if="profile">
-      <Card class="gap-4 max-sm:border-0 max-sm:bg-transparent max-sm:py-0 max-sm:shadow-none">
-        <CardContent class="flex flex-col md:flex-row flex-wrap items-center gap-4 max-sm:px-0">
+      <UserSettings v-if="isOwnProfile" :profile="profile" @saved="refreshProfile" />
+
+      <Card
+        v-else
+        class="gap-4 max-sm:border-0 max-sm:bg-transparent max-sm:py-0 max-sm:shadow-none"
+      >
+        <CardContent
+          class="flex flex-col gap-4 max-sm:px-0 md:flex-row md:flex-wrap md:items-center"
+        >
           <Avatar
             class="h-16 w-16 text-xl"
             :name="profile.display_name"
             :src="profile.avatar_url"
           />
           <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center gap-2">
-              <h1 class="text-2xl font-semibold tracking-tight">
-                {{ profile.display_name }}
-              </h1>
-              <Badge v-if="isOwnProfile" variant="secondary">Это вы</Badge>
-            </div>
+            <h1 class="text-2xl font-semibold tracking-tight">
+              {{ profile.display_name }}
+            </h1>
             <p class="mt-1 text-sm text-muted-foreground">
               Участник с {{ formatDateOnly(profile.created_at) }}
             </p>
           </div>
-          <Button
-            v-if="isOwnProfile"
-            variant="outline"
-            size="sm"
-            @click="router.push({ name: 'settings' })"
-          >
-            Редактировать профиль
-          </Button>
         </CardContent>
       </Card>
 

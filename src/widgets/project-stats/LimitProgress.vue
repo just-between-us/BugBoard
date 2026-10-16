@@ -3,7 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { Pencil } from '@lucide/vue'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
-import { mixHex, REPORTS_PROGRESS_MAX, REPORTS_PROGRESS_MIN } from './chart-colors'
+import { mixColors, LIMIT_PROGRESS_MAX, LIMIT_PROGRESS_MIN } from './chart-colors'
 
 interface Props {
   count: number
@@ -62,7 +62,7 @@ function cancel() {
 
 const ratio = computed(() => (limit.value > 0 ? Math.min(props.count / limit.value, 1) : 1))
 const percent = computed(() => Math.round(ratio.value * 100))
-const barColor = computed(() => mixHex(REPORTS_PROGRESS_MIN, REPORTS_PROGRESS_MAX, ratio.value))
+const barColor = computed(() => mixColors(LIMIT_PROGRESS_MIN, LIMIT_PROGRESS_MAX, ratio.value))
 </script>
 
 <template>

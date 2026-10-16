@@ -130,7 +130,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function changeEmail(email: string) {
     const { error } = await supabase.auth.updateUser(
       { email },
-      { emailRedirectTo: authRedirectUrl('auth/callback', '/app/settings') },
+      { emailRedirectTo: authRedirectUrl('auth/callback', '/app') },
     )
     if (error) throw error
   }

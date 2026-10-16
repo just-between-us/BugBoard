@@ -56,10 +56,10 @@ function formatMonth(date: string): string {
 
 function levelClass(count: number): string {
   if (count === 0) return 'bg-muted'
-  if (count === 1) return 'bg-sky-500/30'
-  if (count === 2) return 'bg-sky-500/60'
-  if (count <= 4) return 'bg-blue-600/75'
-  return 'bg-blue-600'
+  if (count === 1) return 'bg-(--mono-6)'
+  if (count === 2) return 'bg-(--mono-5)'
+  if (count <= 4) return 'bg-(--mono-3)'
+  return 'bg-(--mono-1)'
 }
 
 function tooltip(day: DayBucket): string {

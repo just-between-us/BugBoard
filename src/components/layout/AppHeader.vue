@@ -1,9 +1,7 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import { Button } from '@/components/ui/button'
-import { useThemeStore } from '@/stores/theme'
-import { Sun, Moon } from '@lucide/vue'
-
-const theme = useThemeStore()
+import { ThemeToggle } from '@/components/theme-toggle'
 </script>
 
 <template>
@@ -14,10 +12,7 @@ const theme = useThemeStore()
       </RouterLink>
 
       <nav class="flex items-center gap-3">
-        <Button variant="ghost" size="icon" aria-label="Переключить тему" @click="theme.toggle()">
-          <Sun v-if="theme.theme === 'dark'" class="h-4 w-4" />
-          <Moon v-else class="h-4 w-4" />
-        </Button>
+        <ThemeToggle />
         <RouterLink
           to="/auth"
           class="text-sm text-muted-foreground transition-colors hover:text-foreground"
