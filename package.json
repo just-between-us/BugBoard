@@ -28,6 +28,7 @@
     "clsx": "^2.1.1",
     "d3-delaunay": "^6.0.4",
     "gh-pages": "^6.3.0",
+    "motion-v": "^2.8.0",
     "pinia": "^4.0.3",
     "reka-ui": "^2.11.0",
     "tailwind-merge": "^3.7.0",

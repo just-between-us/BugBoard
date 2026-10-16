@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { Loader2, Trash2 } from '@lucide/vue'
+import { AnimatePresence, Motion } from 'motion-v'
 import type { ProjectMember } from '@/stores/projects'
 import { Avatar } from '@/components/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatDate } from '@/lib/format'
+import { expandTransition } from '@/lib/motion'
 
 interface Props {
   member: ProjectMember
@@ -76,43 +78,49 @@ function goToMember() {
         </Button>
       </div>
 
-      <div
-        v-if="props.confirming"
-        class="mt-3 rounded-md border border-severity-critical/40 bg-severity-critical/5 p-3"
-        role="alertdialog"
-        aria-label="Подтверждение удаления участника"
-        @click.stop
-      >
-        <p class="text-sm font-medium">Удалить участника?</p>
-        <p class="mt-1 text-xs text-muted-foreground">
-          Он потеряет доступ к проекту и его багам. Вернуть можно, добавив заново.
-        </p>
-        <p v-if="props.deleteError" class="mt-1 text-xs text-severity-critical">
-          {{ props.deleteError }}
-        </p>
-        <div class="mt-2 flex flex-wrap gap-1.5">
-          <Button
-            size="sm"
-            variant="destructive"
-            class="h-8"
-            :disabled="props.deleteSaving"
-            @click="emit('confirm-delete')"
-          >
-            <Loader2 v-if="props.deleteSaving" class="h-4 w-4 animate-spin" />
-            <Trash2 v-else class="h-4 w-4" />
-            {{ props.deleteSaving ? 'Удаляем…' : 'Удалить' }}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            class="h-8"
-            :disabled="props.deleteSaving"
-            @click="emit('cancel-delete')"
-          >
-            Отмена
-          </Button>
-        </div>
-      </div>
+      <AnimatePresence>
+        <Motion
+          v-if="props.confirming"
+          :initial="{ height: 0, opacity: 0, marginTop: 0 }"
+          :animate="{ height: 'auto', opacity: 1, marginTop: 12 }"
+          :exit="{ height: 0, opacity: 0, marginTop: 0 }"
+          :transition="expandTransition"
+          class="overflow-hidden rounded-md border border-severity-critical/40 bg-severity-critical/5 p-3"
+          role="alertdialog"
+          aria-label="Подтверждение удаления участника"
+          @click.stop
+        >
+          <p class="text-sm font-medium">Удалить участника?</p>
+          <p class="mt-1 text-xs text-muted-foreground">
+            Он потеряет доступ к проекту и его багам. Вернуть можно, добавив заново.
+          </p>
+          <p v-if="props.deleteError" class="mt-1 text-xs text-severity-critical">
+            {{ props.deleteError }}
+          </p>
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            <Button
+              size="sm"
+              variant="destructive"
+              class="h-8"
+              :disabled="props.deleteSaving"
+              @click="emit('confirm-delete')"
+            >
+              <Loader2 v-if="props.deleteSaving" class="h-4 w-4 animate-spin" />
+              <Trash2 v-else class="h-4 w-4" />
+              {{ props.deleteSaving ? 'Удаляем…' : 'Удалить' }}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              class="h-8"
+              :disabled="props.deleteSaving"
+              @click="emit('cancel-delete')"
+            >
+              Отмена
+            </Button>
+          </div>
+        </Motion>
+      </AnimatePresence>
     </CardContent>
   </Card>
 </template>

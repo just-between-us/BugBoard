@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { Check, Loader2, Pencil, Undo2 } from '@lucide/vue'
+import { AnimatePresence, Motion } from 'motion-v'
 import type { Bug } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ import {
   statusIcon,
   statusOptions,
 } from '@/entities/bug'
+import { expandTransition } from '@/lib/motion'
 
 interface Props {
   bug: Bug
@@ -98,8 +100,16 @@ async function confirmEditTitle() {
 
       <div class="min-w-0 w-full">
         <div class="flex w-full flex-wrap gap-2">
-          <template v-if="editing">
-            <div class="flex w-full flex-wrap gap-2">
+          <AnimatePresence mode="wait" :initial="false">
+            <Motion
+              v-if="editing"
+              key="edit"
+              :initial="{ height: 0, opacity: 0 }"
+              :animate="{ height: 'auto', opacity: 1 }"
+              :exit="{ height: 0, opacity: 0 }"
+              :transition="expandTransition"
+              class="flex w-full flex-wrap gap-2 overflow-hidden"
+            >
               <Textarea
                 ref="titleInputRef"
                 v-model="titleDraft"
@@ -139,11 +149,15 @@ async function confirmEditTitle() {
               <p v-if="error" class="w-full text-xs text-severity-critical">
                 {{ error }}
               </p>
-            </div>
-          </template>
-
-          <template v-else>
-            <div class="relative inline-block pr-9">
+            </Motion>
+            <Motion
+              v-else
+              key="view"
+              :initial="{ opacity: 0 }"
+              :animate="{ opacity: 1 }"
+              :transition="expandTransition"
+              class="relative inline-block pr-9"
+            >
               <h1 class="text-2xl font-semibold tracking-tight wrap-break-word">
                 {{ bug.title }}
               </h1>
@@ -157,8 +171,8 @@ async function confirmEditTitle() {
               >
                 <Pencil class="h-3.5 w-3.5" />
               </Button>
-            </div>
-          </template>
+            </Motion>
+          </AnimatePresence>
         </div>
 
         <div class="mt-3 flex flex-wrap items-center gap-2">

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { Check, Loader2, MoreHorizontal, Pencil, Trash2 } from '@lucide/vue'
+import { AnimatePresence, Motion } from 'motion-v'
 import type { BugComment } from '@/stores/projects'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/format'
+import { expandTransition } from '@/lib/motion'
 
 interface Props {
   comment: BugComment
@@ -106,84 +108,106 @@ watch(
         </DropdownMenu>
       </div>
 
-      <template v-if="editing">
-        <Textarea
-          ref="commentTextareaRef"
-          v-model="localDraft"
-          :rows="3"
-          class="mt-2"
-          maxlength="2000"
-          :disabled="saving"
-          aria-label="Текст комментария"
-          @keydown.ctrl.enter.prevent="emit('save-edit')"
-          @keydown.esc="emit('cancel-edit')"
-        />
-        <div class="mt-2 flex flex-wrap items-center gap-1.5">
-          <Button
-            size="sm"
-            class="h-8"
-            :disabled="saving || !draft.trim()"
-            @click="emit('save-edit')"
-          >
-            <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
-            <Check v-else class="h-4 w-4" />
-            {{ saving ? 'Сохраняем…' : 'Сохранить' }}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-8"
+      <AnimatePresence mode="wait" :initial="false">
+        <Motion
+          v-if="editing"
+          key="edit"
+          :initial="{ height: 0, opacity: 0 }"
+          :animate="{ height: 'auto', opacity: 1 }"
+          :exit="{ height: 0, opacity: 0 }"
+          :transition="expandTransition"
+          class="overflow-hidden"
+        >
+          <Textarea
+            ref="commentTextareaRef"
+            v-model="localDraft"
+            :rows="3"
+            class="mt-2"
+            maxlength="2000"
             :disabled="saving"
-            @click="emit('cancel-edit')"
-          >
-            Отмена
-          </Button>
-          <span class="ml-auto text-xs text-muted-foreground"> {{ draft.length }}/2000 </span>
-        </div>
-        <p v-if="actionError" class="mt-1 text-xs text-severity-critical">
-          {{ actionError }}
-        </p>
-      </template>
-
-      <p v-else class="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
-        {{ comment.content }}
-      </p>
+            aria-label="Текст комментария"
+            @keydown.ctrl.enter.prevent="emit('save-edit')"
+            @keydown.esc="emit('cancel-edit')"
+          />
+          <div class="mt-2 flex flex-wrap items-center gap-1.5">
+            <Button
+              size="sm"
+              class="h-8"
+              :disabled="saving || !draft.trim()"
+              @click="emit('save-edit')"
+            >
+              <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+              <Check v-else class="h-4 w-4" />
+              {{ saving ? 'Сохраняем…' : 'Сохранить' }}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="h-8"
+              :disabled="saving"
+              @click="emit('cancel-edit')"
+            >
+              Отмена
+            </Button>
+            <span class="ml-auto text-xs text-muted-foreground"> {{ draft.length }}/2000 </span>
+          </div>
+          <p v-if="actionError" class="mt-1 text-xs text-severity-critical">
+            {{ actionError }}
+          </p>
+        </Motion>
+        <Motion
+          v-else
+          key="view"
+          :initial="{ opacity: 0 }"
+          :animate="{ opacity: 1 }"
+          :transition="expandTransition"
+          class="mt-1 whitespace-pre-wrap text-sm leading-relaxed"
+        >
+          {{ comment.content }}
+        </Motion>
+      </AnimatePresence>
     </div>
   </article>
-  <div
-    v-if="confirmDelete"
-    class="mt-2 rounded-md border border-severity-critical/40 bg-severity-critical/5 p-3"
-    role="alertdialog"
-    aria-label="Подтверждение удаления комментария"
-  >
-    <p class="text-sm font-medium">Удалить комментарий?</p>
-    <p class="mt-1 text-xs text-muted-foreground">
-      Комментарий будет скрыт у всех участников. Отменить действие нельзя.
-    </p>
-    <p v-if="actionError" class="mt-1 text-xs text-severity-critical">
-      {{ actionError }}
-    </p>
-    <div class="mt-2 flex flex-wrap justify-between gap-1.5">
-      <Button
-        size="sm"
-        variant="destructive"
-        class="h-8"
-        :disabled="deleteSaving"
-        @click="emit('confirm-delete')"
-      >
-        <Loader2 v-if="deleteSaving" class="h-4 w-4 animate-spin" />
-        <Trash2 v-else class="h-4 w-4" />
-        {{ deleteSaving ? 'Удаляем…' : 'Удалить' }}
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        class="h-8"
-        :disabled="deleteSaving"
-        @click="emit('cancel-delete')"
-      >
-        Отмена
-      </Button>
-    </div>
-  </div>
+  <AnimatePresence>
+    <Motion
+      v-if="confirmDelete"
+      :initial="{ height: 0, opacity: 0, marginTop: 0 }"
+      :animate="{ height: 'auto', opacity: 1, marginTop: 8 }"
+      :exit="{ height: 0, opacity: 0, marginTop: 0 }"
+      :transition="expandTransition"
+      class="overflow-hidden rounded-md border border-severity-critical/40 bg-severity-critical/5 p-3"
+      role="alertdialog"
+      aria-label="Подтверждение удаления комментария"
+    >
+      <p class="text-sm font-medium">Удалить комментарий?</p>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Комментарий будет скрыт у всех участников. Отменить действие нельзя.
+      </p>
+      <p v-if="actionError" class="mt-1 text-xs text-severity-critical">
+        {{ actionError }}
+      </p>
+      <div class="mt-2 flex flex-wrap justify-between gap-1.5">
+        <Button
+          size="sm"
+          variant="destructive"
+          class="h-8"
+          :disabled="deleteSaving"
+          @click="emit('confirm-delete')"
+        >
+          <Loader2 v-if="deleteSaving" class="h-4 w-4 animate-spin" />
+          <Trash2 v-else class="h-4 w-4" />
+          {{ deleteSaving ? 'Удаляем…' : 'Удалить' }}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          class="h-8"
+          :disabled="deleteSaving"
+          @click="emit('cancel-delete')"
+        >
+          Отмена
+        </Button>
+      </div>
+    </Motion>
+  </AnimatePresence>
 </template>

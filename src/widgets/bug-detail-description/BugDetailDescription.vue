@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
 import { Check, Loader2, Pencil } from '@lucide/vue'
+import { AnimatePresence, Motion } from 'motion-v'
 import type { Bug } from '@/stores/projects'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+import { expandTransition } from '@/lib/motion'
 
 interface Props {
   bug: Bug
@@ -70,46 +72,71 @@ async function confirmEditDescription() {
         </Button>
       </div>
 
-      <template v-if="editing">
-        <Textarea
-          ref="descriptionInputRef"
-          v-model="descriptionDraft"
-          :rows="6"
-          class="mt-3"
-          maxlength="10000"
-          :disabled="saving"
-          aria-label="Описание бага"
-          @keydown.ctrl.enter.prevent="confirmEditDescription"
-          @keydown.esc="cancelEditDescription"
-        />
-        <div class="mt-3 flex flex-wrap items-center gap-1.5">
-          <Button size="sm" class="h-9" :disabled="saving" @click="confirmEditDescription">
-            <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
-            <Check v-else class="h-4 w-4" />
-            {{ saving ? 'Сохраняем…' : 'Сохранить' }}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-9"
+      <AnimatePresence mode="wait" :initial="false">
+        <Motion
+          v-if="editing"
+          key="edit"
+          :initial="{ height: 0, opacity: 0 }"
+          :animate="{ height: 'auto', opacity: 1 }"
+          :exit="{ height: 0, opacity: 0 }"
+          :transition="expandTransition"
+          class="overflow-hidden"
+        >
+          <Textarea
+            ref="descriptionInputRef"
+            v-model="descriptionDraft"
+            :rows="6"
+            class="mt-3"
+            maxlength="10000"
             :disabled="saving"
-            @click="cancelEditDescription"
-          >
-            Отмена
-          </Button>
-          <span class="ml-auto text-xs text-muted-foreground">
-            {{ descriptionDraft.length }}/10000
-          </span>
-        </div>
-        <p v-if="error" class="text-xs text-severity-critical">
-          {{ error }}
-        </p>
-      </template>
-
-      <p v-else-if="bug.description" class="mt-3 whitespace-pre-wrap text-sm leading-relaxed">
-        {{ bug.description }}
-      </p>
-      <p v-else class="mt-3 text-sm italic text-muted-foreground">Описание не заполнено</p>
+            aria-label="Описание бага"
+            @keydown.ctrl.enter.prevent="confirmEditDescription"
+            @keydown.esc="cancelEditDescription"
+          />
+          <div class="mt-3 flex flex-wrap items-center gap-1.5">
+            <Button size="sm" class="h-9" :disabled="saving" @click="confirmEditDescription">
+              <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+              <Check v-else class="h-4 w-4" />
+              {{ saving ? 'Сохраняем…' : 'Сохранить' }}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="h-9"
+              :disabled="saving"
+              @click="cancelEditDescription"
+            >
+              Отмена
+            </Button>
+            <span class="ml-auto text-xs text-muted-foreground">
+              {{ descriptionDraft.length }}/10000
+            </span>
+          </div>
+          <p v-if="error" class="text-xs text-severity-critical">
+            {{ error }}
+          </p>
+        </Motion>
+        <Motion
+          v-else-if="bug.description"
+          key="view-filled"
+          :initial="{ opacity: 0 }"
+          :animate="{ opacity: 1 }"
+          :transition="expandTransition"
+          class="mt-3 whitespace-pre-wrap text-sm leading-relaxed"
+        >
+          {{ bug.description }}
+        </Motion>
+        <Motion
+          v-else
+          key="view-empty"
+          :initial="{ opacity: 0 }"
+          :animate="{ opacity: 1 }"
+          :transition="expandTransition"
+          class="mt-3 text-sm italic text-muted-foreground"
+        >
+          Описание не заполнено
+        </Motion>
+      </AnimatePresence>
     </CardContent>
   </Card>
 </template>

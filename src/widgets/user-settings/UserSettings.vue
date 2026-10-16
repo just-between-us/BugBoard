@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { Camera, Check, Loader2, Pencil, Undo2 } from '@lucide/vue'
+import { AnimatePresence, Motion } from 'motion-v'
 import type { PublicProfile } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { supabase } from '@/lib/supabaseClient'
 import { formatDateOnly, toUserError } from '@/lib/format'
+import { expandTransition } from '@/lib/motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -173,53 +175,69 @@ const avatarName = computed(() => props.profile.display_name || auth.user?.email
       </div>
 
       <div class="min-w-0 flex-1">
-        <div v-if="!editingName" class="flex flex-wrap items-center gap-2">
-          <h1 class="truncate text-2xl font-semibold tracking-tight">
-            {{ profile.display_name }}
-          </h1>
-          <Badge variant="secondary">Это вы</Badge>
-          <Button
-            variant="ghost"
-            size="icon"
-            class="h-7 w-7 text-muted-foreground"
-            aria-label="Изменить отображаемое имя"
-            title="Изменить имя"
-            @click="startEditName"
+        <AnimatePresence mode="wait" :initial="false">
+          <Motion
+            v-if="!editingName"
+            key="view"
+            :initial="{ opacity: 0 }"
+            :animate="{ opacity: 1 }"
+            :transition="expandTransition"
+            class="flex flex-wrap items-center gap-2"
           >
-            <Pencil class="h-3 w-3" />
-          </Button>
-        </div>
-
-        <div v-else class="flex flex-wrap items-center gap-2">
-          <Input
-            ref="nameInputRef"
-            v-model="nameDraft"
-            type="text"
-            class="h-9 w-64 max-w-full"
-            aria-label="Отображаемое имя"
-            @keydown.enter.prevent="saveName"
-            @keydown.esc="cancelEditName"
-          />
-          <Button
-            size="icon"
-            class="h-9 w-9"
-            :disabled="nameSaving"
-            aria-label="Сохранить имя"
-            @click="saveName"
+            <h1 class="truncate text-2xl font-semibold tracking-tight">
+              {{ profile.display_name }}
+            </h1>
+            <Badge variant="secondary">Это вы</Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-7 w-7 text-muted-foreground"
+              aria-label="Изменить отображаемое имя"
+              title="Изменить имя"
+              @click="startEditName"
+            >
+              <Pencil class="h-3 w-3" />
+            </Button>
+          </Motion>
+          <Motion
+            v-else
+            key="edit"
+            :initial="{ height: 0, opacity: 0 }"
+            :animate="{ height: 'auto', opacity: 1 }"
+            :exit="{ height: 0, opacity: 0 }"
+            :transition="expandTransition"
+            class="flex flex-wrap items-center gap-2 overflow-hidden"
           >
-            <Loader2 v-if="nameSaving" class="h-4 w-4 animate-spin" />
-            <Check v-else class="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            class="h-9 w-9"
-            aria-label="Отменить"
-            @click="cancelEditName"
-          >
-            <Undo2 class="h-4 w-4" />
-          </Button>
-        </div>
+            <Input
+              ref="nameInputRef"
+              v-model="nameDraft"
+              type="text"
+              class="h-9 w-64 max-w-full"
+              aria-label="Отображаемое имя"
+              @keydown.enter.prevent="saveName"
+              @keydown.esc="cancelEditName"
+            />
+            <Button
+              size="icon"
+              class="h-9 w-9"
+              :disabled="nameSaving"
+              aria-label="Сохранить имя"
+              @click="saveName"
+            >
+              <Loader2 v-if="nameSaving" class="h-4 w-4 animate-spin" />
+              <Check v-else class="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-9 w-9"
+              aria-label="Отменить"
+              @click="cancelEditName"
+            >
+              <Undo2 class="h-4 w-4" />
+            </Button>
+          </Motion>
+        </AnimatePresence>
 
         <p v-if="nameError" class="mt-1 text-sm text-severity-critical">{{ nameError }}</p>
         <p v-else-if="nameSaved" class="mt-1 text-sm text-muted-foreground">Сохранено</p>
@@ -228,49 +246,65 @@ const avatarName = computed(() => props.profile.display_name || auth.user?.email
           Участник с {{ formatDateOnly(profile.created_at) }}
         </p>
 
-        <div v-if="!editingEmail" class="mt-2 flex flex-wrap items-center gap-2 text-sm">
-          <span class="text-muted-foreground">{{ auth.user?.email }}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-7 gap-1 px-2 text-xs text-muted-foreground"
-            aria-label="Изменить почту"
-            @click="startEditEmail"
+        <AnimatePresence mode="wait" :initial="false">
+          <Motion
+            v-if="!editingEmail"
+            key="view"
+            :initial="{ opacity: 0 }"
+            :animate="{ opacity: 1 }"
+            :transition="expandTransition"
+            class="mt-2 flex flex-wrap items-center gap-2 text-sm"
           >
-            <Pencil class="h-3 w-3" />
-          </Button>
-        </div>
-
-        <div v-else class="mt-2 flex flex-wrap items-center gap-2">
-          <Input
-            ref="emailInputRef"
-            v-model="newEmail"
-            type="email"
-            placeholder="new@example.com"
-            autocomplete="email"
-            class="h-8 sm:w-64 max-w-full"
-            aria-label="Новая почта"
-            @keydown.enter.prevent="saveEmail"
-            @keydown.esc="cancelEditEmail"
-          />
-          <div
-            class="flex flex-row-reverse justify-end sm:flex-row sm:justify-start gap-2 w-full sm:w-auto"
-          >
-            <Button :disabled="emailSending" @click="saveEmail">
-              <Loader2 v-if="emailSending" class="h-4 w-4 animate-spin" />
-              {{ emailSending ? 'Отправляем…' : 'Сменить' }}
-            </Button>
+            <span class="text-muted-foreground">{{ auth.user?.email }}</span>
             <Button
               variant="ghost"
-              size="icon"
-              class="h-9 w-9"
-              aria-label="Отменить"
-              @click="cancelEditEmail"
+              size="sm"
+              class="h-7 gap-1 px-2 text-xs text-muted-foreground"
+              aria-label="Изменить почту"
+              @click="startEditEmail"
             >
-              <Undo2 class="h-4 w-4" />
+              <Pencil class="h-3 w-3" />
             </Button>
-          </div>
-        </div>
+          </Motion>
+          <Motion
+            v-else
+            key="edit"
+            :initial="{ height: 0, opacity: 0, marginTop: 0 }"
+            :animate="{ height: 'auto', opacity: 1, marginTop: 8 }"
+            :exit="{ height: 0, opacity: 0, marginTop: 0 }"
+            :transition="expandTransition"
+            class="flex flex-wrap items-center gap-2 overflow-hidden"
+          >
+            <Input
+              ref="emailInputRef"
+              v-model="newEmail"
+              type="email"
+              placeholder="new@example.com"
+              autocomplete="email"
+              class="h-8 sm:w-64 max-w-full"
+              aria-label="Новая почта"
+              @keydown.enter.prevent="saveEmail"
+              @keydown.esc="cancelEditEmail"
+            />
+            <div
+              class="flex flex-row-reverse justify-end sm:flex-row sm:justify-start gap-2 w-full sm:w-auto"
+            >
+              <Button :disabled="emailSending" @click="saveEmail">
+                <Loader2 v-if="emailSending" class="h-4 w-4 animate-spin" />
+                {{ emailSending ? 'Отправляем…' : 'Сменить' }}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-9 w-9"
+                aria-label="Отменить"
+                @click="cancelEditEmail"
+              >
+                <Undo2 class="h-4 w-4" />
+              </Button>
+            </div>
+          </Motion>
+        </AnimatePresence>
 
         <p v-if="emailError" class="mt-1 text-sm text-severity-critical">{{ emailError }}</p>
         <p v-else-if="emailSent" class="mt-1 text-sm text-muted-foreground">
