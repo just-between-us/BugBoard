@@ -1,6 +1,12 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import { Button } from '@/components/ui/button'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import previewBoard from '@/assets/preview-board.svg'
+
+const GlassShatter = defineAsyncComponent(
+  () => import('@/widgets/landing-preview/GlassShatter.vue'),
+)
 
 type Severity = 'critical' | 'major' | 'minor'
 
@@ -27,7 +33,7 @@ const steps = [
   },
   {
     title: 'Разбирайте баги вместе',
-    text: 'Статус, область и важность у каждого бага, обсуждение в комментариях, ответ на репорт — без переключения между инструментами.',
+    text: 'Статус, область и важность у каждого бага, обсуждение в комментариях, ответ на репорт — без переключений между инструментами.',
   },
 ]
 </script>
@@ -60,7 +66,7 @@ const steps = [
           </div>
         </div>
 
-        <div class="rounded-lg border border-border bg-card">
+        <div class="group relative overflow-hidden rounded-lg border border-border bg-card">
           <div class="flex items-center justify-between border-b border-border px-4 py-3">
             <span class="font-mono text-xs text-muted-foreground">auth-service / issues</span>
             <span class="font-mono text-xs text-muted-foreground"
@@ -89,6 +95,26 @@ const steps = [
               </div>
             </li>
           </ul>
+        </div>
+      </section>
+
+      <!-- Preview -->
+      <section class="border-t border-border">
+        <div class="mx-auto max-w-6xl px-6 py-20">
+          <div class="flex flex-wrap items-end justify-between gap-4">
+            <div class="space-y-3">
+              <h2 class="text-2xl font-semibold tracking-tight">Как это выглядит</h2>
+              <p class="max-w-md text-sm text-muted-foreground">
+                Интерфейс BugBoard под стеклом: нажми, чтобы разбить, и двигай курсором — осколки
+                наклоняются следом за ним.
+              </p>
+            </div>
+            <span class="font-mono text-xs text-muted-foreground">нажми, чтобы разбить</span>
+          </div>
+
+          <div class="mt-8 overflow-hidden rounded-lg border border-border">
+            <GlassShatter :image="previewBoard" />
+          </div>
         </div>
       </section>
 

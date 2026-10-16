@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="740" viewBox="0 0 1600 740" fill="none">
+  <!-- base -->
+  <rect width="1600" height="740" fill="#0e0e12"/>
+
+  <!-- top bar -->
+  <rect x="0" y="0" width="1600" height="60" fill="#131318"/>
+  <line x1="0" y1="60" x2="1600" y2="60" stroke="#ffffff" stroke-opacity="0.08"/>
+  <rect x="24" y="17" width="26" height="26" rx="8" fill="#6e63e8"/>
+  <path d="M31 30.5l3.6 3.6 7.4-8" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="62" y="37" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="600" fill="#f5f5f7">BugBoard</text>
+  <text x="180" y="36" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="13.5" fill="#8f8f9c">auth-service</text>
+  <text x="278" y="36" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="13.5" fill="#55555f">/</text>
+  <text x="292" y="36" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="13.5" fill="#8f8f9c">баги</text>
+  <rect x="1140" y="14" width="320" height="32" rx="9" fill="#ffffff" fill-opacity="0.06"/>
+  <circle cx="1164" cy="28" r="6" stroke="#8f8f9c" stroke-width="1.6"/>
+  <line x1="1168.5" y1="32.5" x2="1173" y2="37" stroke="#8f8f9c" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="1186" y="35" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="13" fill="#8f8f9c">Поиск по багам…</text>
+  <circle cx="1544" cy="30" r="18" fill="#6e63e8"/>
+  <text x="1544" y="35" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600" fill="#ffffff">А</text>
+
+  <!-- sidebar -->
+  <rect x="0" y="60" width="236" height="680" fill="#111116"/>
+  <line x1="236" y1="60" x2="236" y2="740" stroke="#ffffff" stroke-opacity="0.08"/>
+
+  <!-- project switcher -->
+  <rect x="16" y="76" width="204" height="48" rx="10" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.08"/>
+  <rect x="26" y="86" width="28" height="28" rx="8" fill="#6e63e8"/>
+  <text x="40" y="105" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600" fill="#ffffff">a</text>
+  <text x="64" y="97" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="500" fill="#ececf1">auth-service</text>
+  <text x="64" y="113" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#8f8f9c">приватный</text>
+  <path d="M204 96l5 5 5-5" stroke="#8f8f9c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <text x="24" y="152" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" letter-spacing="1.2" fill="#63636e">МЕНЮ</text>
+
+  <!-- nav: bugs (active) -->
+  <rect x="12" y="164" width="212" height="40" rx="9" fill="#ffffff" fill-opacity="0.09"/>
+  <circle cx="34" cy="184" r="7" stroke="#cfc9ff" stroke-width="1.7"/>
+  <circle cx="34" cy="184" r="2.2" fill="#cfc9ff"/>
+  <text x="54" y="189" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="500" fill="#ececf1">Баги</text>
+  <rect x="178" y="174" width="34" height="20" rx="10" fill="#6e63e8" fill-opacity="0.25"/>
+  <text x="195" y="188" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#a89ff5">12</text>
+
+  <!-- nav: reports -->
+  <rect x="27" y="218" width="14" height="16" rx="3" stroke="#8f8f9c" stroke-width="1.6"/>
+  <line x1="30.5" y1="223" x2="37.5" y2="223" stroke="#8f8f9c" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="30.5" y1="227.5" x2="37.5" y2="227.5" stroke="#8f8f9c" stroke-width="1.4" stroke-linecap="round"/>
+  <text x="54" y="230" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#9b9ba6">Репорты</text>
+  <rect x="184" y="218" width="28" height="20" rx="10" fill="#ffffff" fill-opacity="0.08"/>
+  <text x="198" y="232" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#9b9ba6">3</text>
+
+  <!-- nav: members -->
+  <circle cx="31" cy="266" r="4.5" stroke="#8f8f9c" stroke-width="1.6"/>
+  <path d="M24 278c1.5-3.5 4-5 7-5s5.5 1.5 7 5" stroke="#8f8f9c" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="41" cy="268" r="3.5" stroke="#8f8f9c" stroke-width="1.4"/>
+  <text x="54" y="271" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#9b9ba6">Участники</text>
+
+  <!-- nav: settings -->
+  <circle cx="34" cy="306" r="6" stroke="#8f8f9c" stroke-width="1.6"/>
+  <circle cx="34" cy="306" r="2" fill="#8f8f9c"/>
+  <line x1="34" y1="296" x2="34" y2="299" stroke="#8f8f9c" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="34" y1="313" x2="34" y2="316" stroke="#8f8f9c" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="24" y1="306" x2="27" y2="306" stroke="#8f8f9c" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="41" y1="306" x2="44" y2="306" stroke="#8f8f9c" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="54" y="311" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14" fill="#9b9ba6">Настройки</text>
+
+  <!-- sidebar footer -->
+  <line x1="16" y1="656" x2="220" y2="656" stroke="#ffffff" stroke-opacity="0.08"/>
+  <circle cx="36" cy="694" r="16" fill="#26262f" stroke="#ffffff" stroke-opacity="0.1"/>
+  <text x="36" y="699" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#c9c9d2">АК</text>
+  <text x="62" y="690" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" fill="#ececf1">Алексей К.</text>
+  <text x="62" y="706" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#8f8f9c">alex@team.dev</text>
+
+  <!-- page header -->
+  <text x="260" y="105" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="600" fill="#f5f5f7">Баги</text>
+  <rect x="330" y="85" width="44" height="26" rx="13" fill="#6e63e8" fill-opacity="0.16"/>
+  <text x="352" y="103" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" fill="#a89ff5">12</text>
+  <text x="390" y="104" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="13" fill="#8f8f9c">12 открыто · 3 в работе · 4 исправлено</text>
+  <rect x="1396" y="78" width="180" height="44" rx="10" fill="#6e63e8"/>
+  <text x="1486" y="106" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="500" fill="#ffffff">+ Новый баг</text>
+
+  <!-- filter chips -->
+  <rect x="260" y="126" width="112" height="32" rx="16" fill="#ffffff" fill-opacity="0.1"/>
+  <text x="316" y="146" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#ececf1">Открытые · 8</text>
+  <rect x="380" y="126" width="70" height="32" rx="16" fill="#ffffff" fill-opacity="0.04"/>
+  <text x="415" y="146" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#9b9ba6">Все</text>
+  <rect x="458" y="126" width="120" height="32" rx="16" fill="#ffffff" fill-opacity="0.04"/>
+  <text x="518" y="146" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#9b9ba6">Критические</text>
+  <rect x="586" y="126" width="76" height="32" rx="16" fill="#ffffff" fill-opacity="0.04"/>
+  <text x="624" y="146" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#9b9ba6">Мои</text>
+
+  <!-- table card -->
+  <rect x="260" y="176" width="1316" height="504" rx="12" fill="#17171e" stroke="#ffffff" stroke-opacity="0.09"/>
+
+  <!-- table header -->
+  <text x="288" y="206" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" letter-spacing="1" fill="#63636e">КЛЮЧ</text>
+  <text x="396" y="206" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" letter-spacing="1" fill="#63636e">БАГ</text>
+  <text x="880" y="206" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" letter-spacing="1" fill="#63636e">ОБЛАСТЬ</text>
+  <text x="1060" y="206" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" letter-spacing="1" fill="#63636e">ВАЖНОСТЬ</text>
+  <text x="1220" y="206" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" letter-spacing="1" fill="#63636e">СТАТУС</text>
+  <text x="1440" y="206" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" letter-spacing="1" fill="#63636e">ОБНОВЛЁН</text>
+  <line x1="260" y1="224" x2="1576" y2="224" stroke="#ffffff" stroke-opacity="0.07"/>
+
+  <!-- row 1 -->
+  <text x="288" y="267" font-family="'IBM Plex Mono', Consolas, monospace" font-size="13" fill="#9b9ba6">BUG-142</text>
+  <text x="396" y="267" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14.5" fill="#ececf1">Не работает выход из аккаунта в Safari</text>
+  <rect x="880" y="250" width="74" height="24" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.16"/>
+  <text x="917" y="266" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#b9b9c4">auth</text>
+  <circle cx="1066" cy="262" r="4.5" fill="#ff5a4e"/>
+  <text x="1078" y="266" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#ff7d74">критическая</text>
+  <rect x="1220" y="249" width="88" height="26" rx="13" fill="#ff5a4e" fill-opacity="0.13"/>
+  <text x="1264" y="266" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#ff7d74">Открыт</text>
+  <text x="1440" y="266" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#8f8f9c">2 мин назад</text>
+  <line x1="260" y1="300" x2="1576" y2="300" stroke="#ffffff" stroke-opacity="0.06"/>
+
+  <!-- row 2 -->
+  <text x="288" y="343" font-family="'IBM Plex Mono', Consolas, monospace" font-size="13" fill="#9b9ba6">BUG-141</text>
+  <text x="396" y="343" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14.5" fill="#ececf1">Модалка подтверждения наезжает на контент</text>
+  <rect x="880" y="326" width="52" height="24" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.16"/>
+  <text x="906" y="342" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#b9b9c4">ui</text>
+  <circle cx="1066" cy="338" r="4.5" fill="#f2a93b"/>
+  <text x="1078" y="342" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#f5bc64">высокая</text>
+  <rect x="1220" y="325" width="96" height="26" rx="13" fill="#f2a93b" fill-opacity="0.13"/>
+  <text x="1268" y="342" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#f5bc64">В работе</text>
+  <text x="1440" y="342" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#8f8f9c">14 мин назад</text>
+  <line x1="260" y1="376" x2="1576" y2="376" stroke="#ffffff" stroke-opacity="0.06"/>
+
+  <!-- row 3 -->
+  <text x="288" y="419" font-family="'IBM Plex Mono', Consolas, monospace" font-size="13" fill="#9b9ba6">BUG-139</text>
+  <text x="396" y="419" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14.5" fill="#ececf1">Дубли репортов при повторной отправке формы</text>
+  <rect x="880" y="402" width="90" height="24" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.16"/>
+  <text x="925" y="418" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#b9b9c4">database</text>
+  <circle cx="1066" cy="414" r="4.5" fill="#8a93a3"/>
+  <text x="1078" y="418" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#9b9ba6">низкая</text>
+  <rect x="1220" y="401" width="104" height="26" rx="13" fill="#4ade80" fill-opacity="0.13"/>
+  <text x="1272" y="418" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#67d894">Исправлен</text>
+  <text x="1440" y="418" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#8f8f9c">1 час назад</text>
+  <line x1="260" y1="452" x2="1576" y2="452" stroke="#ffffff" stroke-opacity="0.06"/>
+
+  <!-- row 4 -->
+  <text x="288" y="495" font-family="'IBM Plex Mono', Consolas, monospace" font-size="13" fill="#9b9ba6">BUG-137</text>
+  <text x="396" y="495" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14.5" fill="#ececf1">Таймаут интеграции с почтовым сервисом</text>
+  <rect x="880" y="478" width="108" height="24" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.16"/>
+  <text x="934" y="494" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#b9b9c4">integrations</text>
+  <circle cx="1066" cy="490" r="4.5" fill="#f2a93b"/>
+  <text x="1078" y="494" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#f5bc64">высокая</text>
+  <rect x="1220" y="477" width="96" height="26" rx="13" fill="#f2a93b" fill-opacity="0.13"/>
+  <text x="1268" y="494" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#f5bc64">В работе</text>
+  <text x="1440" y="494" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#8f8f9c">3 часа назад</text>
+  <line x1="260" y1="528" x2="1576" y2="528" stroke="#ffffff" stroke-opacity="0.06"/>
+
+  <!-- row 5 -->
+  <text x="288" y="571" font-family="'IBM Plex Mono', Consolas, monospace" font-size="13" fill="#9b9ba6">BUG-131</text>
+  <text x="396" y="571" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14.5" fill="#ececf1">Счётчик непрочитанных не сбрасывается после открытия</text>
+  <rect x="880" y="554" width="52" height="24" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.16"/>
+  <text x="906" y="570" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#b9b9c4">ui</text>
+  <circle cx="1066" cy="566" r="4.5" fill="#8a93a3"/>
+  <text x="1078" y="570" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#9b9ba6">низкая</text>
+  <rect x="1220" y="553" width="104" height="26" rx="13" fill="#4ade80" fill-opacity="0.13"/>
+  <text x="1272" y="570" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#67d894">Исправлен</text>
+  <text x="1440" y="570" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#8f8f9c">вчера</text>
+  <line x1="260" y1="604" x2="1576" y2="604" stroke="#ffffff" stroke-opacity="0.06"/>
+
+  <!-- row 6 -->
+  <text x="288" y="647" font-family="'IBM Plex Mono', Consolas, monospace" font-size="13" fill="#9b9ba6">BUG-128</text>
+  <text x="396" y="647" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="14.5" fill="#ececf1">Крэш вьюхи профиля при пустом аватаре</text>
+  <rect x="880" y="630" width="52" height="24" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.16"/>
+  <text x="906" y="646" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#b9b9c4">ui</text>
+  <circle cx="1066" cy="642" r="4.5" fill="#ff5a4e"/>
+  <text x="1078" y="646" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#ff7d74">критическая</text>
+  <rect x="1220" y="629" width="96" height="26" rx="13" fill="#f2a93b" fill-opacity="0.13"/>
+  <text x="1268" y="646" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#f5bc64">В работе</text>
+  <text x="1440" y="646" font-family="Inter, 'Segoe UI', Roboto, sans-serif" font-size="12.5" fill="#8f8f9c">вчера</text>
+</svg>
