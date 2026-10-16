@@ -5,7 +5,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 </script>
 
 <template>
-  <header class="border-b border-border">
+  <header class="border-b border-border sticky top-0 z-70 bg-background">
     <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
       <RouterLink to="/" class="font-mono text-base font-semibold tracking-tight">
         BugBoard
