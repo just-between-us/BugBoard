@@ -1,0 +1,1 @@
+import{n as e}from"./loader-circle-RAqt1U1Z.js";var t=e({name:`chevrons-up-down`,size:24,node:[[`path`,{d:`m7 15 5 5 5-5`,key:`1hf1tw`}],[`path`,{d:`m7 9 5-5 5 5`,key:`sgt6xg`}]]});export{t};

@@ -1,0 +1,1 @@
+@keyframes hero-scroll-9b1f9d21{0%{transform:translateY(0)}to{transform:translateY(-50%)}}.hero-scroll-track[data-v-9b1f9d21]{animation:32s linear infinite hero-scroll-9b1f9d21}@media (hover:hover){.hero-scroll-clip:hover .hero-scroll-track[data-v-9b1f9d21]{animation-play-state:paused}}@media (prefers-reduced-motion:reduce){.hero-scroll-track[data-v-9b1f9d21]{animation:none}}
