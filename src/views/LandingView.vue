@@ -4,6 +4,8 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 import HeroSection from '@/widgets/landing-hero/HeroSection.vue'
 import previewBoard from '@/assets/preview-board.svg'
 
+const ProductTour = defineAsyncComponent(() => import('@/widgets/landing-tour/ProductTour.vue'))
+
 const GlassShatter = defineAsyncComponent(
   () => import('@/widgets/landing-preview/GlassShatter.vue'),
 )
@@ -30,6 +32,9 @@ const steps = [
 
     <main>
       <HeroSection />
+
+      <!-- Product Tour: туториал сразу после героя -->
+      <ProductTour />
 
       <!-- Preview -->
       <section class="border-t border-border">
