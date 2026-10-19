@@ -3,6 +3,7 @@ import { Motion } from 'motion-v'
 import { RouterLink } from 'vue-router'
 import { ArrowRight, CodeXml } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import { AsciiBackground } from '@/components/ascii-background'
 import HeroBugCard, { type HeroBug } from './HeroBugCard.vue'
 import { useCardTilt } from './useCardTilt'
 
@@ -61,12 +62,15 @@ const easeOut = [0.22, 1, 0.36, 1] as const
 </script>
 
 <template>
+  <AsciiBackground
+    class="pointer-events-none absolute inset-0 hidden text-muted-foreground/60 mask-[radial-gradient(120%_100%_at_72%_60%,black_50%,transparent_78%),linear-gradient(to_bottom,black_55%,transparent_90%)] [mask-composite:intersect] lg:block"
+  />
   <section
     class="relative mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:grid-cols-2 lg:items-center lg:py-28"
   >
-    <!-- Текст: кратко — что за платформа и как её использовать -->
+    <!-- Текст: кратко — что за платформа и как её использовать; на десктопе — карточка со стеклом, чтобы ASCII-фон не мешал читать -->
     <Motion
-      class="relative z-20"
+      class="relative z-20 lg:rounded-xl lg:border lg:border-border/60 lg:bg-background/75 lg:p-8 lg:shadow-[0_18px_50px_-30px_rgba(0,0,0,0.35)] lg:backdrop-blur-md"
       :initial="{ opacity: 0, y: 16 }"
       :animate="{ opacity: 1, y: 0 }"
       :transition="{ duration: 0.5, ease: easeOut }"
@@ -116,7 +120,7 @@ const easeOut = [0.22, 1, 0.36, 1] as const
 
     <!-- Карточки: на десктопе — колонка с параллакс-наклоном, на мобиле — фоновая шторка справа с автопрокруткой -->
     <div
-      class="hero-scroll-clip relative overflow-hidden px-2 max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:w-1/2 lg:h-136"
+      class="hero-scroll-clip relative overflow-hidden px-4 max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:w-1/2 lg:h-136"
       style="perspective: 1000px"
     >
       <div class="hero-scroll-track flex flex-col">
