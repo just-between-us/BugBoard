@@ -46,28 +46,9 @@ const pad = (i: number) => String(i + 1).padStart(2, '0')
       :whileInView="{ opacity: 1, y: 0 }"
       :viewport="{ once: true, amount: 0.15 }"
       :transition="{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }"
-    >
-      <div class="flex flex-wrap items-end justify-between gap-4">
-        <div class="space-y-3">
-          <h2 class="text-2xl font-semibold tracking-tight">
-            Путь от регистрации до первого репорта
-          </h2>
-          <p class="max-w-xl text-sm text-muted-foreground">
-            Короткий тур по BugBoard: как завести аккаунт и проект, вести баги, дать репортёрам
-            ссылку и разобрать входящий репорт. Шаги идут сами — любой можно повторить.
-          </p>
-        </div>
-        <span class="font-mono text-xs text-muted-foreground">01 → 07 · шаги</span>
-      </div>
-
-      <TourStage class="mt-8" :controller="tour" />
-
-      <!-- Подпись текущего шага + управление -->
+      ><!-- Подпись текущего шага + управление -->
       <div class="mt-6 flex items-start justify-between gap-6">
         <div class="min-w-0">
-          <p class="font-mono text-xs text-muted-foreground">
-            Шаг {{ pad(current) }} из {{ pad(steps.length - 1) }}
-          </p>
           <h3 class="mt-1 text-lg font-medium">{{ activeStep.title }}</h3>
           <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
             {{ activeStep.caption }}
@@ -76,7 +57,26 @@ const pad = (i: number) => String(i + 1).padStart(2, '0')
             Автовоспроизведение отключено в системных настройках — переключайте шаги вручную.
           </p>
         </div>
+      </div>
 
+      <!-- Меню шагов -->
+      <div class="mt-5 flex flex-wrap items-center gap-2">
+        <button
+          v-for="(step, index) in steps"
+          :key="step.id"
+          type="button"
+          :aria-current="current === index"
+          class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors duration-200"
+          :class="
+            current === index
+              ? 'border-primary/40 bg-primary/5 font-medium text-foreground'
+              : 'border-border text-muted-foreground hover:bg-secondary/60'
+          "
+          @click="tour.goTo(index)"
+        >
+          <span class="font-mono text-[11px] pt-0.5">{{ pad(index) }}</span>
+          {{ step.label }}
+        </button>
         <div class="flex shrink-0 items-center gap-1">
           <button
             v-if="finished"
@@ -124,25 +124,7 @@ const pad = (i: number) => String(i + 1).padStart(2, '0')
         </div>
       </div>
 
-      <!-- Меню шагов -->
-      <div class="mt-5 flex flex-wrap items-center gap-2">
-        <button
-          v-for="(step, index) in steps"
-          :key="step.id"
-          type="button"
-          :aria-current="current === index"
-          class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors duration-200"
-          :class="
-            current === index
-              ? 'border-primary/40 bg-primary/5 font-medium text-foreground'
-              : 'border-border text-muted-foreground hover:bg-secondary/60'
-          "
-          @click="tour.goTo(index)"
-        >
-          <span class="font-mono text-[11px] pt-0.5">{{ pad(index) }}</span>
-          {{ step.label }}
-        </button>
-      </div>
+      <TourStage class="mt-8" :controller="tour" />
     </Motion>
   </section>
 </template>

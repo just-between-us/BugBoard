@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, CircleCheck, Inbox, Loader2, Send } from '@lucide/vue'
+import { ArrowLeft, ArrowUpRight, CircleCheck, Inbox, Loader2, Mail, Send } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectsStore, type Project } from '@/stores/projects'
 import { toUserError } from '@/lib/format'
@@ -31,6 +31,9 @@ const title = ref('')
 const description = ref('')
 const email = ref('')
 const otpCode = ref('')
+
+/** Блок «Репорт отправлен» — получает фокус после отправки, чтобы скринридер его озвучил. */
+const successRef = ref<HTMLElement | null>(null)
 
 const loading = ref(false)
 const error = ref('')
@@ -123,6 +126,8 @@ async function submitReport() {
   })
   submittedReportId.value = created.id
   submitted.value = true
+  await nextTick()
+  successRef.value?.focus()
 }
 
 async function resendCode() {
@@ -196,33 +201,67 @@ onMounted(loadProject)
       </Card>
 
       <!-- Success -->
-      <Card v-else-if="submitted">
-        <CardHeader>
-          <CircleCheck class="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
-          <CardTitle class="font-mono text-base">Репорт отправлен</CardTitle>
-          <CardDescription>
-            Команда проекта «{{ project?.name }}» увидит репорт во вкладке «Репорты» и ответит, как
-            только его разберёт.
-            <template v-if="otpUsed && email">
-              Почта {{ email }} подтверждена — это ваш аккаунт на BugBoard, вход по коду из письма,
-              без пароля.
-            </template>
-          </CardDescription>
-        </CardHeader>
-        <CardContent class="flex flex-wrap gap-2">
-          <Button
-            v-if="submittedReportId"
-            @click="
-              router.push({
-                name: 'report-view',
-                params: { reportId: submittedReportId },
-              })
-            "
+      <Card v-else-if="submitted" class="border-emerald-500/25">
+        <CardHeader class="justify-items-center text-center">
+          <span
+            class="flex h-14 w-14 animate-in items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/20 fade-in-0 motion-reduce:animate-none zoom-in-95 duration-500"
           >
-            Открыть репорт
-          </Button>
-          <Button variant="outline" @click="resetForm">Отправить ещё один</Button>
-          <Button variant="ghost" @click="router.push({ name: 'landing' })">На главную</Button>
+            <CircleCheck class="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+          </span>
+          <div
+            class="space-y-1.5 animate-in delay-150 duration-500 fill-mode-both fade-in-0 motion-reduce:animate-none slide-in-from-bottom-2 outline-hidden"
+            ref="successRef"
+            tabindex="-1"
+          >
+            <CardTitle class="font-mono text-base">Репорт отправлен</CardTitle>
+            <CardDescription class="mx-auto max-w-md text-balance">
+              Команда проекта «{{ project?.name }}» увидит репорт во вкладке «Репорты» и ответит,
+              как только его разберёт.
+            </CardDescription>
+          </div>
+        </CardHeader>
+
+        <CardContent class="space-y-4">
+          <!-- Что отправили -->
+          <div
+            v-if="title"
+            class="animate-in delay-200 duration-500 fill-mode-both fade-in-0 motion-reduce:animate-none rounded-md border border-border bg-muted/40 p-3 text-left slide-in-from-bottom-2"
+          >
+            <p class="truncate text-sm font-medium">{{ title }}</p>
+            <p class="mt-1 line-clamp-3 whitespace-pre-line text-sm text-muted-foreground">
+              {{ description }}
+            </p>
+          </div>
+
+          <!-- Аккаунт по почте -->
+          <div
+            v-if="otpUsed && email"
+            class="flex animate-in items-start gap-2 delay-300 duration-500 fill-mode-both fade-in-0 motion-reduce:animate-none rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3 text-left slide-in-from-bottom-2"
+          >
+            <Mail class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <p class="text-sm text-muted-foreground">
+              Почта <span class="font-medium text-foreground">{{ email }}</span> подтверждена — это
+              ваш аккаунт на BugBoard: вход по коду из письма, без пароля.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap justify-center gap-2">
+            <Button
+              v-if="submittedReportId"
+              class="gap-1.5"
+              @click="
+                router.push({
+                  name: 'report-view',
+                  params: { reportId: submittedReportId },
+                })
+              "
+            >
+              Открыть репорт
+              <ArrowUpRight class="h-4 w-4" />
+            </Button>
+            <Button variant="outline" @click="resetForm">Отправить ещё один</Button>
+            <Button variant="ghost" @click="router.push({ name: 'landing' })">На главную</Button>
+          </div>
         </CardContent>
       </Card>
 

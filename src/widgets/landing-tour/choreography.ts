@@ -72,6 +72,8 @@ export const steps: TourStep[] = [
     setup() {
       s.screen = 'auth'
       s.auth = { tab: 'signup', name: '', email: '', password: '', otp: '' }
+      // Прокрутка к настройкам не должна пережить шаг «Ссылка» — оболочка скрыта
+      s.settingsScroll = 0
       s.focused = ''
     },
     end() {
@@ -146,6 +148,7 @@ export const steps: TourStep[] = [
       s.project = { name: '', description: '', isPublic: false }
       s.created = false
       s.publicProjects = []
+      s.settingsScroll = 0
       s.focused = ''
     },
     end() {
@@ -263,10 +266,13 @@ export const steps: TourStep[] = [
       s.switcherProject = 'auth-service'
       // Публичность — из шага «Проект»: ссылка для репортёров уже в шапке
       s.settingsPublic = true
+      // Прокрутка к настройкам не должна пережить шаг «Ссылка»
+      s.settingsScroll = 0
       s.switcherOpen = false
       s.statusMenuOpen = false
       s.bugStatus = 'all'
-      s.bugDetail = false
+      // Карточки видны на этой вкладке — статус шага «Баги» не должен просочиться
+      s.bugPageStatus = 'in_progress'
       s.copied = false
       s.focused = ''
       narrOff()
@@ -338,9 +344,9 @@ export const steps: TourStep[] = [
   {
     id: 'bugs',
     label: 'Баги',
-    title: 'Бэклог: фильтры вместо хаоса',
+    title: 'Баг: от карточки до страницы разбора',
     caption:
-      'Статус, важность и область — как метки, по которым баг читается глазом. Клик по карточке открывает разбор: описание, обсуждение и привязанные репорты.',
+      'Клик по карточке открывает страницу бага: описание и обсуждение команды, атрибуты с автосохранением и привязка репортов.',
     setup() {
       s.screen = 'shell'
       s.activeTab = 'bugs'
@@ -350,34 +356,95 @@ export const steps: TourStep[] = [
       s.switcherProject = 'auth-service'
       s.statusMenuOpen = false
       s.bugStatus = 'all'
-      s.bugDetail = false
+      s.bugPageStatus = 'in_progress'
+      s.bugAttrMenuOpen = false
+      s.bugSaving = false
+      s.bugSavedFlash = false
+      s.bugScroll = 0
+      s.bugComments = []
+      s.settingsScroll = 0
       s.focused = ''
       narrOff()
     },
     end() {
       this.setup()
-      s.bugStatus = 'in_progress'
+      // Reduced motion: шаг показан готовым — статус уже применён
+      s.bugPageStatus = 'fixed'
     },
     async run(ctx) {
-      await ctx.wait(600)
-      await ctx.moveTo('[data-tour="bug-status-filter"]')
-      await ctx.click('[data-tour="bug-status-filter"]')
-      s.statusMenuOpen = true
-      await ctx.wait(700)
-      await ctx.moveTo('[data-tour="bug-status-in-progress"]')
-      await ctx.click('[data-tour="bug-status-in-progress"]')
-      s.statusMenuOpen = false
-      s.bugStatus = 'in_progress'
-      await ctx.wait(900)
-      await ctx.moveTo('[data-tour="bug-card"]')
-      await ctx.wait(300)
-      await ctx.click('[data-tour="bug-card"]')
-      s.bugDetail = true
-      await ctx.wait(1400)
-      await ctx.moveTo('[data-tour="bug-detail-close"]')
-      await ctx.click('[data-tour="bug-detail-close"]')
-      s.bugDetail = false
       await ctx.wait(500)
+      // 1. Список: баг читается с карточки — метки и UUID
+      await ctx.moveTo('[data-tour="bug-card"]')
+      narrate('Статус, важность, область и UUID — всё на карточке.', '[data-tour="bug-card"]')
+      await ctx.wait(2200)
+      await ctx.click('[data-tour="bug-card"]')
+      // Пузырь уходит вместе с уходящим экраном — на новой странице свой рассказ
+      narrOff()
+      s.screen = 'bug'
+      await ctx.wait(800)
+      // 2. Шапка страницы — те же метки, что в списке, автор и полный ID
+      await ctx.moveTo('[data-tour="bug-header"]', 0.6)
+      await ctx.hot('[data-tour="bug-header"]')
+      narrate('Один баг — одна страница: метки, автор и полный ID.', '[data-tour="bug-header"]')
+      await ctx.wait(1800)
+      // 3. Атрибуты: статус правится на месте — автосохранение без кнопок
+      await ctx.moveTo('[data-tour="bug-status"]')
+      await ctx.click('[data-tour="bug-status"]')
+      s.bugAttrMenuOpen = true
+      narrate(
+        'Атрибуты правятся прямо здесь — автосохранение, без кнопок.',
+        '[data-tour="bug-attrs"]',
+      )
+      await ctx.wait(650)
+      await ctx.moveTo('[data-tour="bug-status-fixed"]')
+      await ctx.click('[data-tour="bug-status-fixed"]')
+      s.bugAttrMenuOpen = false
+      s.bugSaving = true
+      await ctx.wait(400)
+      s.bugSaving = false
+      s.bugSavedFlash = true
+      s.bugPageStatus = 'fixed'
+      await ctx.wait(1100)
+      s.bugSavedFlash = false
+      await ctx.hot(null)
+      await ctx.wait(450)
+      // 4. Комментарии прилетают штампом — та же механика, что у публичных
+      //    карточек в шаге 02 (вспышки частиц, кивок страницы, ритм 400ms)
+      await ctx.moveTo('[data-tour="bug-comments"]', 0.6)
+      s.bugComments.push({
+        id: 'c1',
+        author: 'Дмитрий К.',
+        time: 'Сегодня, 14:20',
+        text: 'Проверил на проде — на Safari и Firefox воспроизводится, логи callback-URL приложил.',
+      })
+      await ctx.wait(400)
+      s.bugComments.push({
+        id: 'c2',
+        author: 'Анна',
+        time: 'Сегодня, 15:05',
+        text: 'Причина в exchangeCodeForSession — починила проверку подписи, выкатываю в стейджинг.',
+      })
+      // Пузырь меряет карточку уже с двумя комментариями (nextTick после пушей)
+      narrate(
+        'Обсуждение живёт прямо под описанием — комментарии команды.',
+        '[data-tour="bug-comments"]',
+      )
+      await ctx.wait(2100)
+      // 5. Скролл к репортам — курсор на блок, пузырь справа от него
+      s.bugScroll = 380
+      await ctx.wait(700)
+      await ctx.moveTo('[data-tour="bug-reports"]', 0.7)
+      narrateFollow('Если баг соответствует репортам, их можно привязать к нему.', 'right')
+      await ctx.wait(2300)
+      // 6. Назад к проекту — список встречает с применённым статусом
+      narrOff()
+      s.bugScroll = 0
+      await ctx.wait(650)
+      await ctx.moveTo('[data-tour="bug-back"]')
+      await ctx.click('[data-tour="bug-back"]')
+      s.screen = 'shell'
+      await ctx.wait(900)
+      await ctx.hot(null)
     },
   },
   {
@@ -385,7 +452,7 @@ export const steps: TourStep[] = [
     label: 'Ссылка',
     title: 'Ссылка, с которой начинается репорт',
     caption:
-      'В настройках — видимость проекта. Включите публичность и скопируйте ссылку вида /report/:id: её можно оставить в описании, на сайте или в дискорде. Регистрация репортёру не нужна.',
+      'В настройках — видимость проекта. Включите публичность, сохраните — и ссылка вида /report/:id готова: оставьте её в описании, на сайте или в дискорде. Регистрация репортёру не нужна.',
     setup() {
       s.screen = 'shell'
       s.activeTab = 'settings'
@@ -394,6 +461,9 @@ export const steps: TourStep[] = [
       s.navHotAll = false
       s.switcherProject = 'auth-service'
       s.settingsPublic = false
+      s.settingsSaving = false
+      s.settingsSaved = false
+      s.settingsScroll = 0
       s.copied = false
       s.focused = ''
       narrOff()
@@ -403,17 +473,29 @@ export const steps: TourStep[] = [
       s.settingsPublic = true
     },
     async run(ctx) {
-      await ctx.wait(700)
+      await ctx.wait(600)
+      // Вкладка настроек длинная — прокручиваем страницу к карточке «Видимость»
+      s.settingsScroll = 480
+      await ctx.wait(750)
       await ctx.moveTo('[data-tour="settings-public"]')
       await ctx.click('[data-tour="settings-public"]')
       s.settingsPublic = true
       await ctx.wait(900)
-      await ctx.moveTo('[data-tour="settings-copy"]')
-      await ctx.click('[data-tour="settings-copy"]')
-      s.copied = true
-      await ctx.wait(1500)
-      s.copied = false
+      // Ссылка работает только после сохранения видимости — как в приложении
+      await ctx.moveTo('[data-tour="settings-save"]')
+      await ctx.click('[data-tour="settings-save"]')
+      s.settingsSaving = true
+      await ctx.wait(450)
+      s.settingsSaving = false
+      s.settingsSaved = true
+      await ctx.wait(1100)
+      s.settingsSaved = false
       await ctx.wait(300)
+      // Курсор — на кнопку-ссылку рядом с чекбоксом (не на копирование)
+      await ctx.moveTo('[data-tour="settings-link"]')
+      await ctx.click('[data-tour="settings-link"]')
+      await ctx.wait(500)
+      await ctx.hot(null)
     },
   },
   {
@@ -426,6 +508,7 @@ export const steps: TourStep[] = [
       s.screen = 'reporter'
       s.reportStep = 'form'
       s.report = { title: '', body: '', email: '', otp: '' }
+      s.settingsScroll = 0
       s.focused = ''
     },
     end() {
@@ -486,9 +569,9 @@ export const steps: TourStep[] = [
   {
     id: 'reports',
     label: 'Репорты',
-    title: 'Входящие репорты и ответ репортёру',
+    title: 'Входящий репорт: ответ, страница и путь к багу',
     caption:
-      'Команда принимает или отклоняет репорт, отвечает репортёру и привязывает его к багу — дальше баг живёт в бэклоге, а репортёр видит ответ по той же ссылке.',
+      'Команда принимает репорт и отвечает репортёру, страница репорта привязывает его к найденному багу — а из валидного репорта можно сразу создать баг.',
     setup() {
       s.screen = 'shell'
       s.activeTab = 'reports'
@@ -497,11 +580,13 @@ export const steps: TourStep[] = [
       s.navHotAll = false
       s.switcherProject = 'auth-service'
       s.reportMenuOpen = false
+      s.reportBugMenuOpen = false
       s.reportStatus = 'new'
       s.replyOpen = false
       s.replyText = ''
       s.replySent = false
       s.linked = false
+      s.settingsScroll = 0
       s.focused = ''
       narrOff()
     },
@@ -514,6 +599,7 @@ export const steps: TourStep[] = [
     },
     async run(ctx) {
       await ctx.wait(700)
+      // Статус — дропдаун в шапке карточки, как в реальном ReportCard
       await ctx.moveTo('[data-tour="report-status-trigger"]')
       await ctx.click('[data-tour="report-status-trigger"]')
       s.reportMenuOpen = true
@@ -523,6 +609,7 @@ export const steps: TourStep[] = [
       s.reportMenuOpen = false
       s.reportStatus = 'confirmed'
       await ctx.wait(900)
+      // Ответ репортёру: редактор в карточке
       await ctx.moveTo('[data-tour="report-reply-btn"]')
       await ctx.click('[data-tour="report-reply-btn"]')
       s.replyOpen = true
@@ -542,10 +629,40 @@ export const steps: TourStep[] = [
       s.replyOpen = false
       s.replySent = true
       await ctx.wait(1100)
-      await ctx.moveTo('[data-tour="report-link-bug"]')
-      await ctx.click('[data-tour="report-link-bug"]')
+      // Клик по карточке открывает страницу репорта — как goToReport в реальном
+      await ctx.moveTo('[data-tour="report-card"]')
+      await ctx.click('[data-tour="report-card"]')
+      s.screen = 'report-page'
+      await ctx.wait(900)
+      // Привязка к багу — смысл страницы: репорт уходит к уже найденному багу
+      await ctx.moveTo('[data-tour="report-page-link"]')
+      narrate(
+        'Привязка к багу: если репорт пришёл на уже найденный баг — привяжите его к существующему, а не создавайте дубль.',
+        '[data-tour="report-page-link"]',
+      )
+      await ctx.wait(3400)
+      narrOff()
+      await ctx.click('[data-tour="report-page-link"]')
+      s.reportBugMenuOpen = true
+      await ctx.wait(900)
+      await ctx.moveTo('[data-tour="report-page-link-item"]')
+      await ctx.click('[data-tour="report-page-link-item"]')
+      s.reportBugMenuOpen = false
       s.linked = true
+      await ctx.wait(1300)
+      // «/ назад» — возврат во вкладку репортов, чип привязки уже в карточке
+      await ctx.moveTo('[data-tour="report-page-back"]')
+      await ctx.click('[data-tour="report-page-back"]')
+      s.screen = 'shell'
       await ctx.wait(1000)
+      // Кнопка «Баг»: создание бага на основе репорта — только пояснение, без перехода
+      narrate(
+        'Если репорт валиден и действительно указывает на ошибку — можно создать запись о баге на его основе.',
+        '[data-tour="report-bug-create"]',
+      )
+      await ctx.moveTo('[data-tour="report-bug-create"]')
+      await ctx.wait(3000)
+      narrOff()
       // Курсор уходит в угол сцены — тур завершён
       await ctx.moveTo('[data-tour="park"]', 1)
       await ctx.wait(600)

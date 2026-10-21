@@ -6,7 +6,9 @@ import TourNarration from './parts/TourNarration.vue'
 import AuthScreen from './screens/AuthScreen.vue'
 import ProjectsScreen from './screens/ProjectsScreen.vue'
 import AppShellScreen from './screens/AppShellScreen.vue'
+import BugPageScreen from './screens/BugPageScreen.vue'
 import ReporterFormScreen from './screens/ReporterFormScreen.vue'
+import ReportDetailScreen from './screens/ReportDetailScreen.vue'
 
 /** Логический вьюпорт приложения: фиксированные VIEW_W×VIEW_H, масштабируется целиком.
  *  Экраны лежат стопкой; неактивные уходят вглубь (translateZ + blur + opacity). */
@@ -36,8 +38,14 @@ const props = defineProps<{
     <div class="tour-screen" :class="tourState.screen === 'shell' && 'is-active'">
       <AppShellScreen />
     </div>
+    <div class="tour-screen" :class="tourState.screen === 'bug' && 'is-active'">
+      <BugPageScreen />
+    </div>
     <div class="tour-screen" :class="tourState.screen === 'reporter' && 'is-active'">
       <ReporterFormScreen />
+    </div>
+    <div class="tour-screen" :class="tourState.screen === 'report-page' && 'is-active'">
+      <ReportDetailScreen />
     </div>
 
     <TourNarration

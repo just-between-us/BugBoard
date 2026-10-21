@@ -5,7 +5,7 @@ import { reactive } from 'vue'
 export const VIEW_W = 1280
 export const VIEW_H = 720
 
-export type TourScreen = 'auth' | 'projects' | 'shell' | 'reporter'
+export type TourScreen = 'auth' | 'projects' | 'shell' | 'bug' | 'reporter' | 'report-page'
 
 export type TourTab = 'bugs' | 'reports' | 'members' | 'stats' | 'settings'
 
@@ -34,6 +34,11 @@ export const tourState = reactive({
   switcherOpen: false,
   activeTab: 'bugs' as TourTab,
   settingsPublic: false,
+  /** Сохранение видимости: «Сохраняем…» в кнопке → вспышка «Сохранено» рядом. */
+  settingsSaving: false,
+  settingsSaved: false,
+  /** Прокрутка оболочки к карточке «Видимость» — вкладка настроек длинная (логические px). */
+  settingsScroll: 0,
   copied: false,
   /** Сайдбар раскрыт (шаг 3 стартует со свёрнутого рейла w-16 и раскрывает его). */
   sidebarOpen: false,
@@ -57,7 +62,17 @@ export const tourState = reactive({
   // Шаг 4 — баги
   statusMenuOpen: false,
   bugStatus: 'all' as 'all' | 'in_progress',
-  bugDetail: false,
+  /** Статус открытого бага: страница бага и первая карточка списка — одно состояние. */
+  bugPageStatus: 'in_progress' as 'in_progress' | 'fixed',
+  /** Дропдаун «Статус» в Card «Атрибуты» на странице бага. */
+  bugAttrMenuOpen: false,
+  /** Автосохранение атрибутов: индикатор «Сохраняем…» → вспышка «Сохранено». */
+  bugSaving: false,
+  bugSavedFlash: false,
+  /** Прокрутка страницы бага вверх к блоку «Репорты» (логические px). */
+  bugScroll: 0,
+  /** Комментарии прилетают под описанием штампом — как публичные карточки в шаге 02. */
+  bugComments: [] as { id: string; author: string; time: string; text: string }[],
 
   // Шаг 6 — публичная форма репортёра
   reportStep: 'form' as 'form' | 'otp' | 'success',
@@ -65,6 +80,8 @@ export const tourState = reactive({
 
   // Шаг 7 — репорты команды
   reportMenuOpen: false,
+  /** Меню «Привязать к багу» в блоке управления на странице репорта. */
+  reportBugMenuOpen: false,
   reportStatus: 'new' as 'new' | 'confirmed' | 'rejected',
   replyOpen: false,
   replyText: '',
@@ -91,6 +108,9 @@ export function resetTourState(): void {
     switcherOpen: false,
     activeTab: 'bugs',
     settingsPublic: false,
+    settingsSaving: false,
+    settingsSaved: false,
+    settingsScroll: 0,
     copied: false,
     sidebarOpen: false,
     sidebarDim: false,
@@ -99,10 +119,16 @@ export function resetTourState(): void {
     narr: { text: '', key: 0, mode: 'off', anchor: '', at: 'right' },
     statusMenuOpen: false,
     bugStatus: 'all',
-    bugDetail: false,
+    bugPageStatus: 'in_progress',
+    bugAttrMenuOpen: false,
+    bugSaving: false,
+    bugSavedFlash: false,
+    bugScroll: 0,
+    bugComments: [],
     reportStep: 'form',
     report: { title: '', body: '', email: '', otp: '' },
     reportMenuOpen: false,
+    reportBugMenuOpen: false,
     reportStatus: 'new',
     replyOpen: false,
     replyText: '',

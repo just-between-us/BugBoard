@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, CircleCheck, Send } from '@lucide/vue'
+import { ArrowLeft, ArrowUpRight, CircleCheck, Mail, Send } from '@lucide/vue'
 import { tourState } from '../tourState'
 import MockField from '../parts/MockField.vue'
 
@@ -15,7 +15,9 @@ const state = tourState
         На главную
       </p>
 
+      <!-- Форма и OTP — карточка проекта -->
       <div
+        v-if="state.reportStep !== 'success'"
         class="mt-3 rounded-xl border border-border bg-card p-6 shadow-[0_24px_60px_-45px_rgba(0,0,0,0.5)]"
       >
         <!-- Шапка проекта -->
@@ -99,25 +101,67 @@ const state = tourState
             <span>Отправить код ещё раз</span>
           </div>
         </div>
+      </div>
 
-        <!-- Успех -->
-        <div v-else class="mt-6 flex flex-col items-center py-4 text-center">
-          <CircleCheck class="h-10 w-10 text-emerald-600" />
-          <p class="mt-3 text-lg font-semibold tracking-tight">Репорт отправлен</p>
-          <p class="mt-1 max-w-sm text-sm text-muted-foreground">
-            Команда увидит его во вкладке «Репорты». Ответ придёт на {{ state.report.email }} — по
-            той же ссылке.
-          </p>
-          <div class="mt-5 flex items-center gap-2">
-            <button
-              type="button"
-              class="rounded-md border border-input bg-background px-3 py-2 text-sm font-medium"
+      <!-- Успех — отдельная карточка с эмблемой, как в ReportPage: сводка отправленного,
+           изумрудный блок про аккаунт по почте и три действия -->
+      <div
+        v-else
+        class="mt-3 rounded-xl border border-emerald-500/25 bg-card p-6 shadow-[0_24px_60px_-45px_rgba(0,0,0,0.5)]"
+      >
+        <div class="flex flex-col items-center gap-1.5 text-center">
+          <span
+            class="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/20"
+          >
+            <CircleCheck class="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+          </span>
+          <div class="space-y-1.5">
+            <p class="font-mono text-base font-semibold leading-none">Репорт отправлен</p>
+            <p class="mx-auto max-w-md text-balance text-sm text-muted-foreground">
+              Команда проекта «auth-service» увидит репорт во вкладке «Репорты» и ответит, как
+              только его разберёт.
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-6 space-y-4">
+          <!-- Что отправили -->
+          <div class="rounded-md border border-border bg-muted/40 p-3 text-left">
+            <p class="truncate text-sm font-medium">{{ state.report.title }}</p>
+            <p class="mt-1 line-clamp-3 whitespace-pre-line text-sm text-muted-foreground">
+              {{ state.report.body }}
+            </p>
+          </div>
+
+          <!-- Аккаунт по почте: в этом демо подтверждение было -->
+          <div
+            class="flex items-start gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3 text-left"
+          >
+            <Mail class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <p class="text-sm text-muted-foreground">
+              Почта
+              <span class="font-medium text-foreground">{{ state.report.email }}</span>
+              подтверждена — это ваш аккаунт на BugBoard: вход по коду из письма, без пароля.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap justify-center gap-2">
+            <span
+              class="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
+            >
+              Открыть репорт
+              <ArrowUpRight class="h-4 w-4" />
+            </span>
+            <span
+              class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border bg-background px-4 text-sm font-medium shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
             >
               Отправить ещё один
-            </button>
-            <button type="button" class="rounded-md px-3 py-2 text-sm text-muted-foreground">
+            </span>
+            <span
+              class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
               На главную
-            </button>
+            </span>
           </div>
         </div>
       </div>

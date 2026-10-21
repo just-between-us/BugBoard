@@ -11,6 +11,7 @@ import {
   Copy,
   ExternalLink,
   Globe,
+  Loader2,
   Lock,
   Plus,
   Search,
@@ -42,7 +43,7 @@ const tabs: { key: TourTab; label: string; icon: typeof Bug; count?: number }[] 
 
 const bugs = [
   {
-    id: '#A3F1',
+    id: '30a09dcb-be14-48c6-afda-cc048c1f7b0e',
     title: 'Кнопка входа через GitHub не создаёт аккаунт',
     description:
       'После редиректа с GitHub окно закрывается, пользователь не появляется в базе. На Safari 17 воспроизводится стабильно.',
@@ -53,7 +54,7 @@ const bugs = [
     isNew: true,
   },
   {
-    id: '#C9D2',
+    id: '9d4c1f6a-3e87-4b52-8a19-6c7d0e5f2b34',
     title: 'Таймаут при массовой загрузке файлов',
     description: 'Больше 20 файлов подряд обрываются на 30-й секунде без ошибки в логах.',
     area: 'performance',
@@ -62,7 +63,7 @@ const bugs = [
     time: '17 окт 2026 г., 18:40',
   },
   {
-    id: '#E7B4',
+    id: '5e81b2d7-9f43-4a6c-b0e2-3d18c97a4f65',
     title: 'Съезжает шапка на мобильных экранах',
     description: 'На ширине до 380px навигация наезжает на логотип при открытой клавиатуре.',
     area: 'ui',
@@ -71,7 +72,7 @@ const bugs = [
     time: '14 окт 2026 г., 11:20',
   },
   {
-    id: '#D4C7',
+    id: 'c3a7f19e-6d5b-4c82-a4f7-1b9e0d6c2a58',
     title: 'Дубли комментариев при быстрых кликах',
     description: 'Двойной клик по «Отправить» создаёт два одинаковых комментария.',
     area: 'api',
@@ -81,9 +82,12 @@ const bugs = [
   },
 ]
 
-const visibleBugs = computed(() =>
-  state.bugStatus === 'all' ? bugs : bugs.filter((bug) => bug.status === 'in_progress'),
-)
+// Первый баг — тот, что открывается в шаге: его статус правят на странице бага,
+// поэтому карточка в списке живёт одним состоянием со страницей
+const visibleBugs = computed(() => {
+  const list = bugs.map((bug, i) => (i === 0 ? { ...bug, status: state.bugPageStatus } : bug))
+  return state.bugStatus === 'all' ? list : list.filter((bug) => bug.status === 'in_progress')
+})
 </script>
 
 <template>
@@ -97,8 +101,12 @@ const visibleBugs = computed(() =>
     />
 
     <main class="relative min-w-0 flex-1 overflow-hidden">
-      <!-- Страница проекта — контейнер как в ProjectViewPage (без кнопки «Назад») -->
-      <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <!-- Страница проекта — контейнер как в ProjectViewPage (без кнопки «Назад»).
+           translate прокручивает страницу целиком — как скролл браузера в настройках -->
+      <div
+        class="mx-auto max-w-6xl px-4 py-6 transition-[translate] duration-500 ease-out sm:px-6"
+        :style="{ translate: `0 -${state.settingsScroll}px` }"
+      >
         <!-- Шапка проекта -->
         <header class="mb-6 rounded-lg" data-tour="project-header">
           <div class="flex items-start justify-between gap-4">
@@ -138,11 +146,13 @@ const visibleBugs = computed(() =>
                 </div>
               </div>
             </div>
-            <div v-if="state.settingsPublic" class="ml-auto flex shrink-0 items-center gap-2">
+            <div v-if="state.settingsPublic" class="ml-auto flex shrink-0 items-center gap-1">
+              <!-- Реальный контроль — Button outline sm поверх <a target="_blank"> (Send) -->
               <span
-                class="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-3 text-xs font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+                data-tour="header-link"
+                class="inline-flex h-8 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md border bg-background px-2.5 text-sm font-medium shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
               >
-                <Send class="h-3.5 w-3.5" />
+                <Send class="h-3.5 w-3.5 shrink-0" />
                 Ссылка для репортёров
               </span>
               <span class="relative inline-flex">
@@ -162,7 +172,7 @@ const visibleBugs = computed(() =>
                   title="Копировать ссылку для репортёров"
                   aria-label="Копировать ссылку для репортёров"
                 >
-                  <Copy class="h-3.5 w-3.5" />
+                  <Copy class="h-3.5 w-3.5 ml-2" />
                 </button>
               </span>
             </div>
@@ -227,7 +237,7 @@ const visibleBugs = computed(() =>
                   >
                     <span class="text-sm font-medium">В работе</span>
                     <span
-                      class="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/80 hover:text-foreground"
+                      class="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50"
                       title="Сбросить фильтр статуса"
                     >
                       <X class="h-3.5 w-3.5" />
@@ -290,9 +300,9 @@ const visibleBugs = computed(() =>
                     <span class="line-clamp-1">Все области</span>
                   </div>
 
-                  <!-- Период -->
+                  <!-- Период: Button outline h-8 (DateRangePicker) -->
                   <span
-                    class="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-2.5 text-xs font-normal text-muted-foreground shadow-xs"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-2.5 text-xs font-normal text-muted-foreground shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
                   >
                     <Calendar class="h-3.5 w-3.5" />
                     Период
@@ -300,10 +310,10 @@ const visibleBugs = computed(() =>
                 </div>
               </div>
 
-              <!-- Сбросить всё — только при активных фильтрах -->
+              <!-- Сбросить всё — только при активных фильтрах (Button destructive) -->
               <span
                 v-if="state.bugStatus !== 'all'"
-                class="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-destructive px-3 text-xs font-medium text-white"
+                class="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-destructive px-3 text-xs font-medium text-white transition-all hover:bg-destructive/90 dark:bg-destructive/60"
               >
                 <X class="h-4 w-4" />
                 Сбросить всё
@@ -314,11 +324,11 @@ const visibleBugs = computed(() =>
                 class="inline-flex w-fit shrink-0 items-stretch [&>*:not(:first-child)]:border-l-0 [&>*:not(:first-child)]:rounded-l-none [&>*:not(:last-child)]:rounded-r-none"
               >
                 <span
-                  class="flex h-8 items-center rounded-md border bg-background px-3 text-sm text-foreground shadow-xs"
+                  class="flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs"
                   >Дата создания</span
                 >
                 <span
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-xs"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
                   title="По убыванию"
                 >
                   <ArrowUpDown class="h-4 w-4" />
@@ -338,16 +348,71 @@ const visibleBugs = computed(() =>
           </TransitionGroup>
         </div>
 
-        <!-- Вкладка «Репорты» -->
+        <!-- Вкладка «Репорты»: embedded-вид реальной секции — поиск во всю
+             ширину, панель фильтров (статичная) и список -->
         <div v-else-if="state.activeTab === 'reports'">
-          <div class="flex items-center gap-2 pt-2">
-            <p class="text-sm font-medium">Репорты</p>
-            <span class="rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-medium">3</span>
+          <!-- Поиск: Input type=search с иконкой слева -->
+          <div class="relative mt-2 min-w-0 flex-1">
+            <Search
+              class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
             <div
-              class="ml-auto flex min-h-[32px] w-64 items-center gap-2 rounded-md border border-input bg-background px-3 text-xs text-muted-foreground"
+              class="flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 pl-10 text-base shadow-xs dark:bg-input/30 md:text-sm"
             >
-              <Search class="h-3.5 w-3.5" />
-              Поиск по репортам...
+              <span class="text-muted-foreground">Поиск по репортам...</span>
+            </div>
+          </div>
+
+          <!-- ReportFilters: на десктопе панель видна всегда; без взаимодействия -->
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <div class="flex min-w-0 flex-1 items-center overflow-x-auto py-1">
+              <div class="flex w-max items-center gap-2">
+                <!-- Селекты в анатомии SelectTrigger: border-input + bg-background -->
+                <div
+                  class="flex h-9 w-36 shrink-0 cursor-pointer items-center rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <span class="line-clamp-1">Все статусы</span>
+                </div>
+                <div
+                  class="flex h-9 w-36 shrink-0 cursor-pointer items-center rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <span class="line-clamp-1">Все репорты</span>
+                </div>
+                <div
+                  class="flex h-9 w-24 shrink-0 cursor-pointer items-center rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <span class="line-clamp-1">Все</span>
+                </div>
+                <div
+                  class="flex h-9 w-36 shrink-0 cursor-pointer items-center rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <span class="line-clamp-1">Все флаги</span>
+                </div>
+
+                <!-- «Период»: Button outline h-8 (DateRangePicker) -->
+                <span
+                  class="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2.5 text-xs font-normal text-muted-foreground shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+                >
+                  <Calendar class="h-3.5 w-3.5" />
+                  Период
+                </span>
+              </div>
+            </div>
+
+            <!-- Группа сортировки: поле (select h-8) + кнопка направления -->
+            <div
+              class="inline-flex w-fit shrink-0 items-stretch [&>*:not(:first-child)]:rounded-l-none [&>*:not(:first-child)]:border-l-0 [&>*:not(:last-child)]:rounded-r-none"
+            >
+              <span
+                class="flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs"
+                >Дата создания</span
+              >
+              <span
+                class="inline-flex h-8 w-8 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+                title="По убыванию"
+              >
+                <ArrowUpDown class="h-4 w-4" />
+              </span>
             </div>
           </div>
 
@@ -365,24 +430,101 @@ const visibleBugs = computed(() =>
             <!-- Намёк на продолжение списка; якорь для парковки курсора в конце тура -->
             <div
               data-tour="park"
-              class="pointer-events-none rounded-lg border border-border bg-card p-4 opacity-50"
+              class="pointer-events-none rounded-xl border bg-card p-4 opacity-50"
             >
-              <div class="flex items-center gap-2">
-                <span class="h-2 w-2 rounded-full bg-blue-500" />
-                <span class="text-xs font-medium"
-                  >Не открывается страница оплаты после 3D-secure</span
+              <div class="flex items-center gap-2.5">
+                <span
+                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary"
                 >
-                <span class="ml-auto text-[11px] text-muted-foreground">17 окт · 09:15</span>
+                  МС
+                </span>
+                <div class="min-w-0">
+                  <p class="block truncate text-sm font-medium">Мария С.</p>
+                  <p class="text-xs text-muted-foreground">17 окт 2025, 09:15</p>
+                </div>
               </div>
-              <p class="mt-1.5 line-clamp-1 text-xs text-muted-foreground">
+              <p class="mt-3 wrap-break-word font-medium">
+                Не открывается страница оплаты после 3D-secure
+              </p>
+              <p class="mt-1 line-clamp-1 text-sm text-muted-foreground">
                 После возврата из банка редирект ведёт на пустую страницу.
               </p>
             </div>
           </div>
         </div>
 
-        <!-- Вкладка «Настройки»: карточки в анатомии реального Card -->
+        <!-- Вкладка «Настройки»: четыре карточки в анатомии реального ProjectSettings -->
         <div v-else-if="state.activeTab === 'settings'" class="space-y-4 pb-8">
+          <!-- Основное: CardHeader с CardAction («Сохранить» неактивна — правок нет) -->
+          <div class="flex flex-col gap-6 rounded-xl border bg-card py-6 shadow-sm">
+            <div class="flex items-start justify-between gap-4 px-6">
+              <div class="grid gap-1.5">
+                <h3 class="text-base font-semibold leading-none">Основное</h3>
+                <p class="text-sm text-muted-foreground">Название и описание проекта</p>
+              </div>
+              <span
+                class="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap self-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground opacity-50"
+              >
+                Сохранить
+              </span>
+            </div>
+            <div class="space-y-4 px-6">
+              <div class="space-y-1.5">
+                <span class="flex items-center gap-2 text-sm leading-none font-medium">
+                  Название *
+                </span>
+                <span
+                  class="flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs dark:bg-input/30 md:text-sm"
+                >
+                  auth-service
+                </span>
+              </div>
+              <div class="space-y-1.5">
+                <span class="flex items-center gap-2 text-sm leading-none font-medium">
+                  Описание
+                </span>
+                <span
+                  class="flex min-h-[80px] w-full items-start rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs dark:bg-input/30 md:text-sm"
+                >
+                  Сервис авторизации и входа
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Аватар: Avatar h-16 (rounded-full) + кнопка загрузки; «Удалить» есть
+               только у проектов с загруженным аватаром -->
+          <div class="flex flex-col gap-6 rounded-xl border bg-card py-6 shadow-sm">
+            <div class="grid gap-1.5 px-6">
+              <h3 class="text-base font-semibold leading-none">Аватар</h3>
+              <p class="text-sm text-muted-foreground">
+                JPG, PNG или WebP, ≤ 2 МБ — как в шапке проекта и списках
+              </p>
+            </div>
+            <div class="px-6">
+              <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <span
+                  class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xl font-medium text-primary"
+                >
+                  A
+                </span>
+                <div class="space-y-1.5">
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border bg-background px-3 text-sm font-medium shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+                    >
+                      <Camera class="h-4 w-4" />
+                      Загрузить
+                    </span>
+                  </div>
+                  <p class="text-xs text-muted-foreground">
+                    Показывается в списках проектов и в шапке проекта
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="flex flex-col gap-6 rounded-xl border bg-card py-6 shadow-sm">
             <div class="flex items-start justify-between gap-4 px-6">
               <div class="grid gap-1.5">
@@ -391,12 +533,21 @@ const visibleBugs = computed(() =>
                   Публичный проект принимает репорты по ссылке, приватный — только от участников
                 </p>
               </div>
-              <span
-                class="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap self-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all"
-                :class="!state.settingsPublic && 'pointer-events-none opacity-50'"
-              >
-                Сохранить
-              </span>
+              <!-- CardAction: «Сохраняем…» в кнопке, затем вспышка «Сохранено» слева -->
+              <div class="flex shrink-0 items-center gap-2 self-center">
+                <p v-if="state.settingsSaved" class="text-sm text-muted-foreground">Сохранено</p>
+                <span
+                  data-tour="settings-save"
+                  class="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-all"
+                  :class="
+                    (!state.settingsPublic || state.settingsSaving) &&
+                    'pointer-events-none opacity-50'
+                  "
+                >
+                  <Loader2 v-if="state.settingsSaving" class="h-4 w-4 animate-spin" />
+                  {{ state.settingsSaving ? 'Сохраняем…' : 'Сохранить' }}
+                </span>
+              </div>
             </div>
 
             <div class="space-y-4 px-6">
@@ -416,7 +567,6 @@ const visibleBugs = computed(() =>
                   <span class="cursor-pointer text-sm">Публичный проект</span>
                 </div>
 
-                <!-- Ссылка для репортёров: outline-кнопка + CopyButton с зелёным тултипом -->
                 <Transition
                   enter-active-class="tour-depth-enter"
                   enter-from-class="tour-depth-enter-from"
@@ -424,10 +574,13 @@ const visibleBugs = computed(() =>
                   leave-to-class="tour-depth-leave-to"
                 >
                   <div v-if="state.settingsPublic" class="flex items-center gap-1">
+                    <!-- Button outline sm поверх <a target="_blank"> — по ней репортёр
+                         открывает форму; CopyButton рядом (иконка с ml-2 — как в реальном) -->
                     <span
-                      class="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-2.5 text-xs font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+                      data-tour="settings-link"
+                      class="inline-flex h-8 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md border bg-background px-2.5 text-sm font-medium shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
                     >
-                      <ExternalLink class="h-3.5 w-3.5" />
+                      <ExternalLink class="h-3.5 w-3.5 shrink-0" />
                       Ссылка для репортёров
                     </span>
                     <span class="relative inline-flex">
@@ -447,7 +600,7 @@ const visibleBugs = computed(() =>
                         title="Копировать ссылку для репортёров"
                         aria-label="Копировать ссылку для репортёров"
                       >
-                        <Copy class="h-3.5 w-3.5" />
+                        <Copy class="h-3.5 w-3.5 ml-2" />
                       </button>
                     </span>
                   </div>
@@ -477,7 +630,7 @@ const visibleBugs = computed(() =>
                 </p>
               </div>
               <span
-                class="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap self-center rounded-md border border-severity-critical/30 bg-background px-4 py-2 text-sm font-medium text-severity-critical shadow-xs transition-colors hover:bg-severity-critical/5"
+                class="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap self-center rounded-md border border-severity-critical/30 bg-background px-4 py-2 text-sm font-medium text-severity-critical shadow-xs transition-colors hover:bg-severity-critical/5 dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
               >
                 <Trash2 class="h-4 w-4" />
                 Удалить проект
@@ -485,55 +638,6 @@ const visibleBugs = computed(() =>
             </div>
           </div>
         </div>
-
-        <!-- Деталь бага: приподнимается из списка в глубину -->
-        <template v-if="state.bugDetail">
-          <div class="absolute inset-0 bg-black/40" />
-          <div
-            class="tour-depth-front absolute top-1/2 left-1/2 w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-[0_32px_80px_-40px_rgba(0,0,0,0.6)]"
-          >
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <p class="font-mono text-[11px] text-muted-foreground">#A3F1</p>
-                <h3 class="mt-1 text-lg font-semibold tracking-tight">
-                  Кнопка входа через GitHub не создаёт аккаунт
-                </h3>
-              </div>
-              <button
-                type="button"
-                data-tour="bug-detail-close"
-                class="rounded-md p-1.5 text-muted-foreground"
-              >
-                <X class="h-4 w-4" />
-              </button>
-            </div>
-            <p class="mt-3 text-sm text-muted-foreground">
-              После редиректа с GitHub окно закрывается, пользователь не появляется в базе. На
-              Safari 17 воспроизводится стабильно. Требуется проверить exchangeCodeForSession и логи
-              callback-URL.
-            </p>
-            <div class="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-border pt-4 text-xs">
-              <p class="flex justify-between">
-                <span class="text-muted-foreground">Статус</span><span>В работе</span>
-              </p>
-              <p class="flex justify-between">
-                <span class="text-muted-foreground">Важность</span><span>Критический</span>
-              </p>
-              <p class="flex justify-between">
-                <span class="text-muted-foreground">Область</span><span>Авторизация</span>
-              </p>
-              <p class="flex justify-between">
-                <span class="text-muted-foreground">Автор</span><span>Анна</span>
-              </p>
-            </div>
-            <div class="mt-4 rounded-md border border-border bg-muted/30 p-3 text-xs">
-              <p class="font-medium">Репорты бага</p>
-              <p class="mt-1 text-muted-foreground">
-                1 репорт привязан — «Кнопка входа через GitHub не работает» от Дмитрия К.
-              </p>
-            </div>
-          </div>
-        </template>
       </div>
     </main>
 
