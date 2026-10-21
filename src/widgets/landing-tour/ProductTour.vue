@@ -273,6 +273,71 @@ const pad = (i: number) => String(i + 1).padStart(2, '0')
   opacity: 0;
 }
 
+/* Зелёный тултип CopyButton — как у реального компонента; центрирование по X
+   живёт в translate (-translate-x-1/2), здесь только вертикальное смещение */
+.tour-copy-tip-enter-active {
+  transition:
+    opacity 0.15s ease-out,
+    transform 0.15s ease-out;
+}
+
+.tour-copy-tip-leave-active {
+  transition:
+    opacity 0.1s ease-in,
+    transform 0.1s ease-in;
+}
+
+.tour-copy-tip-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.tour-copy-tip-leave-to {
+  opacity: 0;
+  transform: translateY(-2px);
+}
+
+/* Пояснение-пузырь шага «Интерфейс»: позиция едет плавным переходом left/top —
+   в режиме follow это мягкое запаздывание за курсором, а смена привязки скользит */
+.tour-narr {
+  transition:
+    left 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    top 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tour-narr-in-enter-active {
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tour-narr-in-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.tour-narr-in-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.tour-narr-in-leave-to {
+  opacity: 0;
+}
+
+/* Буквы проявляются по одной — задержка задаётся инлайном */
+.tour-ltr {
+  animation: tour-ltr 0.25s ease-out both;
+}
+
+@keyframes tour-ltr {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Подсветка цели для курсора тура — цветом самого курсора, по краям элемента
    (у input это скругление его собственного rounded-md) */
 .tour-hot {
@@ -632,6 +697,19 @@ const pad = (i: number) => String(i + 1).padStart(2, '0')
   .tour-ripple,
   .tour-magic {
     animation: none;
+  }
+
+  /* Пузырь-пояснение в reduced motion не показывается (шаг показан готовым),
+     но на всякий случай — без анимаций букв и переходов */
+  .tour-ltr,
+  .tour-narr {
+    animation: none;
+    transition: none;
+  }
+
+  .tour-narr-in-enter-active,
+  .tour-narr-in-leave-active {
+    transition: none;
   }
 }
 </style>

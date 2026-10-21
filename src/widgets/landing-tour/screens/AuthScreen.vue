@@ -72,7 +72,7 @@ watch(
   <div class="absolute inset-0 overflow-hidden bg-background">
     <!-- Фон: мягкая сетка, живёт на заднем плане глубины и не участвует в камере -->
     <div
-      class="tour-depth-back pointer-events-none absolute inset-0 opacity-60 bg-[radial-gradient(var(--mono-6)_1px,transparent_1px)] [background-size:26px_26px]"
+      class="tour-depth-back pointer-events-none absolute inset-0 opacity-60 bg-[radial-gradient(var(--mono-6)_1px,transparent_1px)] bg-size-[26px_26px]"
     />
 
     <!-- Камера шага: приближение и подводка активного поля к центру -->
@@ -82,7 +82,7 @@ watch(
           <div
             :key="state.auth.tab === 'otp' ? 'otp' : 'form'"
             ref="cardRef"
-            class="tour-depth-mid relative w-[400px] rounded-xl border border-border bg-card p-6 shadow-[0_24px_60px_-40px_rgba(0,0,0,0.5)]"
+            class="tour-depth-mid relative w-100 rounded-xl border border-border bg-card p-6 shadow-[0_24px_60px_-40px_rgba(0,0,0,0.5)]"
           >
             <p class="font-mono text-base font-semibold tracking-tight">BugBoard</p>
             <p class="mt-1 text-sm text-muted-foreground">

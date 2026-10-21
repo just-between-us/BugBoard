@@ -74,8 +74,8 @@ watch(
       </span>
       <span v-else class="text-muted-foreground">{{ placeholder }}</span>
       <!-- Каретка + частицы нового символа -->
-      <span v-if="focused" class="relative ml-px inline-flex h-[15px] shrink-0 translate-y-[2px]">
-        <span class="tour-caret block h-[15px] w-px bg-foreground" />
+      <span v-if="focused" class="relative ml-px inline-flex h-3.75 shrink-0 translate-y-0.5">
+        <span class="tour-caret block h-3.75 w-px bg-foreground" />
         <span
           v-for="particle in particles"
           :key="particle.id"

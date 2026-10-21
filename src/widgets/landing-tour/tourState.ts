@@ -35,6 +35,24 @@ export const tourState = reactive({
   activeTab: 'bugs' as TourTab,
   settingsPublic: false,
   copied: false,
+  /** Сайдбар раскрыт (шаг 3 стартует со свёрнутого рейла w-16 и раскрывает его). */
+  sidebarOpen: false,
+  /** Затемнение контента при открытом сайдбаре в шаге «Интерфейс». */
+  sidebarDim: false,
+  /** Все пункты разделов сайдбара зажигаются обводкой разом (финальный бит шага). */
+  navHotAll: false,
+  /** Активный проект в переключателе сайдбара — его меняет быстрая смена chevron'ом. */
+  switcherProject: 'auth-service' as 'auth-service' | 'website-marketing',
+  /** Рассказ-пузырь шага «Интерфейс»: текст проявляется по буквам. */
+  narr: {
+    text: '',
+    key: 0,
+    /** off — скрыт; anchor — под привязанным элементом; follow — вслед за курсором. */
+    mode: 'off' as 'off' | 'anchor' | 'follow',
+    anchor: '',
+    /** Смещение в режиме follow: справа от курсора или чуть ниже. */
+    at: 'right' as 'right' | 'below',
+  },
 
   // Шаг 4 — баги
   statusMenuOpen: false,
@@ -74,6 +92,11 @@ export function resetTourState(): void {
     activeTab: 'bugs',
     settingsPublic: false,
     copied: false,
+    sidebarOpen: false,
+    sidebarDim: false,
+    navHotAll: false,
+    switcherProject: 'auth-service',
+    narr: { text: '', key: 0, mode: 'off', anchor: '', at: 'right' },
     statusMenuOpen: false,
     bugStatus: 'all',
     bugDetail: false,

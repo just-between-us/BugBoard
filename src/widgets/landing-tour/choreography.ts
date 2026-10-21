@@ -41,6 +41,26 @@ export interface TourStep {
 
 const s = tourState
 
+/* Пояснения шага «Интерфейс»: текст-пузырь под привязанным элементом
+   или вслед за курсором (см. TourNarration.vue) */
+function narrate(text: string, anchor: string): void {
+  s.narr.text = text
+  s.narr.anchor = anchor
+  s.narr.mode = 'anchor'
+  s.narr.key++
+}
+
+function narrateFollow(text: string, at: 'right' | 'below'): void {
+  s.narr.text = text
+  s.narr.at = at
+  s.narr.mode = 'follow'
+  s.narr.key++
+}
+
+function narrOff(): void {
+  s.narr.mode = 'off'
+}
+
 export const steps: TourStep[] = [
   {
     id: 'signup',
@@ -232,43 +252,87 @@ export const steps: TourStep[] = [
     label: 'Интерфейс',
     title: 'Один проект — все разделы под рукой',
     caption:
-      'Слева — переключатель проектов и разделы текущего: баги, репорты, участники, статистика и настройки. Счётчики на вкладках показывают, где накопилось работу.',
+      'Шапка даёт контекст проекта, вкладки — быстрый переход по разделам, а боковое меню дублирует их и добавляет переключатель проектов.',
     setup() {
       s.screen = 'shell'
       s.activeTab = 'bugs'
+      // Сайдбар стартует свёрнутым в рейл w-16 — раскроется по ходу шага
+      s.sidebarOpen = false
+      s.sidebarDim = false
+      s.navHotAll = false
+      s.switcherProject = 'auth-service'
+      // Публичность — из шага «Проект»: ссылка для репортёров уже в шапке
+      s.settingsPublic = true
       s.switcherOpen = false
       s.statusMenuOpen = false
       s.bugStatus = 'all'
       s.bugDetail = false
+      s.copied = false
       s.focused = ''
+      narrOff()
     },
     end() {
       this.setup()
+      s.sidebarOpen = true
     },
     async run(ctx) {
       await ctx.wait(600)
-      await ctx.moveTo('[data-tour="switcher"]')
-      await ctx.click('[data-tour="switcher"]')
-      s.switcherOpen = true
-      await ctx.wait(1100)
-      await ctx.click('[data-tour="switcher"]')
-      s.switcherOpen = false
+      // 1. Шапка проекта — контекст: имя, описание, служебная информация
+      await ctx.moveTo('[data-tour="project-header"]')
+      await ctx.hot('[data-tour="project-header"]')
+      await ctx.wait(300)
+      narrate(
+        'В шапке — имя проекта, описание и служебная информация.',
+        '[data-tour="project-header"]',
+      )
+      await ctx.wait(2800)
+      // 2. Ссылка для репортёров — публичный проект принимает репорты по ней
+      await ctx.moveTo('[data-tour="header-copy"]')
+      await ctx.click('[data-tour="header-copy"]')
+      s.copied = true
+      narrate(
+        'Если проект публичный, здесь есть ссылка для репортёров.',
+        '[data-tour="project-header"]',
+      )
+      await ctx.wait(1700)
+      s.copied = false
       await ctx.wait(400)
-      // Быстрый облёт разделов сайдбара…
-      await ctx.moveTo('[data-tour="nav-reports"]', 0.6)
-      await ctx.wait(250)
-      await ctx.moveTo('[data-tour="nav-stats"]', 0.6)
-      await ctx.wait(250)
-      // …и вкладок проекта с бейджами
-      await ctx.moveTo('[data-tour="tab-reports"]', 0.7)
+      // 3. Вкладки — навигация по разделам; обводка без клика
+      await ctx.moveTo('[data-tour="project-tabs"]')
+      await ctx.hot('[data-tour="project-tabs"]')
+      narrate('Вкладки — навигация по разделам проекта.', '[data-tour="project-tabs"]')
+      await ctx.wait(2700)
+      // 4. Сайдбар свёрнут в рейл — раскрываем кнопкой, фон уходит под затемнение
+      await ctx.moveTo('[data-tour="sidebar-toggle"]')
+      await ctx.click('[data-tour="sidebar-toggle"]')
+      s.sidebarOpen = true
+      s.sidebarDim = true
+      await ctx.wait(800)
+      await ctx.moveTo('[data-tour="nav-projects"]')
+      await ctx.hot('[data-tour="nav-projects"]')
+      narrateFollow('В боковом меню — секции проектов: ваши и публичные.', 'right')
+      await ctx.wait(2700)
+      // 5. Быстрая смена текущего проекта — контекст страницы остаётся, как в реальном
+      await ctx.moveTo('[data-tour="switcher-next"]')
+      await ctx.hot('[data-tour="switcher"]')
+      narrateFollow('Меню выбора текущего проекта.', 'below')
+      await ctx.click('[data-tour="switcher-next"]')
+      s.switcherProject = 'website-marketing'
+      await ctx.wait(850)
+      await ctx.click('[data-tour="switcher-next"]')
+      s.switcherProject = 'auth-service'
+      await ctx.wait(1400)
+      // 6. Разделы сайдбара — те же вкладки, что под шапкой: курсор на «Баги»,
+      //    но зажигаются обводкой все пять пунктов разом
+      narrateFollow('Здесь продублированы вкладки из-под шапки.', 'right')
+      await ctx.moveTo('[data-tour="nav-bugs"]', 0.6)
       await ctx.wait(300)
-      await ctx.moveTo('[data-tour="tab-members"]', 0.7)
-      await ctx.wait(300)
-      await ctx.moveTo('[data-tour="tab-bugs"]', 0.7)
-      await ctx.wait(250)
-      await ctx.click('[data-tour="tab-bugs"]')
-      s.activeTab = 'bugs'
-      await ctx.wait(500)
+      s.navHotAll = true
+      await ctx.wait(2400)
+      s.navHotAll = false
+      // Кольцо не должно доживать до следующего шага
+      await ctx.hot(null)
+      await ctx.wait(400)
     },
   },
   {
@@ -280,10 +344,15 @@ export const steps: TourStep[] = [
     setup() {
       s.screen = 'shell'
       s.activeTab = 'bugs'
+      s.sidebarOpen = true
+      s.sidebarDim = false
+      s.navHotAll = false
+      s.switcherProject = 'auth-service'
       s.statusMenuOpen = false
       s.bugStatus = 'all'
       s.bugDetail = false
       s.focused = ''
+      narrOff()
     },
     end() {
       this.setup()
@@ -320,9 +389,14 @@ export const steps: TourStep[] = [
     setup() {
       s.screen = 'shell'
       s.activeTab = 'settings'
+      s.sidebarOpen = true
+      s.sidebarDim = false
+      s.navHotAll = false
+      s.switcherProject = 'auth-service'
       s.settingsPublic = false
       s.copied = false
       s.focused = ''
+      narrOff()
     },
     end() {
       this.setup()
@@ -418,6 +492,10 @@ export const steps: TourStep[] = [
     setup() {
       s.screen = 'shell'
       s.activeTab = 'reports'
+      s.sidebarOpen = true
+      s.sidebarDim = false
+      s.navHotAll = false
+      s.switcherProject = 'auth-service'
       s.reportMenuOpen = false
       s.reportStatus = 'new'
       s.replyOpen = false
@@ -425,6 +503,7 @@ export const steps: TourStep[] = [
       s.replySent = false
       s.linked = false
       s.focused = ''
+      narrOff()
     },
     end() {
       this.setup()
