@@ -185,17 +185,11 @@ export const steps: TourStep[] = [
         },
         { speed: 28, settle: 760 },
       )
-      // Камера подводит чекбокс публичности к центру
-      s.focused = 'dialog-public'
-      await ctx.wait(800)
+      // Один клик, и проект публичный — подвода камеры на чекбокс больше нет,
+      // форма целиком уже в кадре; focused='' гасит каретку в описании, как blur
+      s.focused = ''
+      await ctx.wait(300)
       await ctx.moveTo('[data-tour="dialog-public"]')
-      // Пользователь щёлкает чекбоксом туда-сюда — и всё равно оставляет проект публичным
-      await ctx.click('[data-tour="dialog-public"]')
-      s.project.isPublic = true
-      await ctx.wait(420)
-      await ctx.click('[data-tour="dialog-public"]')
-      s.project.isPublic = false
-      await ctx.wait(420)
       await ctx.click('[data-tour="dialog-public"]')
       s.project.isPublic = true
       await ctx.wait(500)
@@ -205,20 +199,22 @@ export const steps: TourStep[] = [
       s.created = true
       await ctx.wait(1500)
       s.dialogOpen = false
-      await ctx.wait(500)
-      // Публичные проекты прилетают в список со вспышками частиц
+      // created-карточка доигрывает появление (морфинг ~1.15s + вспышки ~0.9s) —
+      // даём ей закончиться в тишине, прежде чем начнётся шквал публичных
+      await ctx.wait(900)
+      // Публичные проекты прилетают в список со вспышками частиц — быстро: «БАМ бам бам»
       s.publicProjects.push({
         name: 'landing-redesign',
         description: 'Редизайн лендинга и посадочных страниц',
         date: 'Создан: 2 октября 2026 г.',
       })
-      await ctx.wait(520)
+      await ctx.wait(400)
       s.publicProjects.push({
         name: 'mobile-client',
         description: 'Мобильное приложение для iOS и Android',
         date: 'Создан: 28 сентября 2026 г.',
       })
-      await ctx.wait(520)
+      await ctx.wait(400)
       s.publicProjects.push({
         name: 'status-page',
         description: 'Статус-страница сервиса и уведомления об инцидентах',

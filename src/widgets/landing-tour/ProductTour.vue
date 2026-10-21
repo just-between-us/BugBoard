@@ -139,7 +139,7 @@ const pad = (i: number) => String(i + 1).padStart(2, '0')
           "
           @click="tour.goTo(index)"
         >
-          <span class="font-mono text-[11px]">{{ pad(index) }}</span>
+          <span class="font-mono text-[11px] pt-0.5">{{ pad(index) }}</span>
           {{ step.label }}
         </button>
       </div>
@@ -566,30 +566,30 @@ const pad = (i: number) => String(i + 1).padStart(2, '0')
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Сотрясение страницы от удара штампа: короткий кивок вниз с затуханием */
+/* Сотрясение страницы от удара штампа: кивок вниз с отскоком и боковым джиттером */
 .tour-page-thud {
   animation: tour-page-thud 0.32s cubic-bezier(0.3, 0, 0.6, 1) 0.18s;
 }
 
 @keyframes tour-page-thud {
   0% {
-    transform: translateY(0);
+    transform: translate(0, 0);
   }
 
   32% {
-    transform: translateY(3.5px);
+    transform: translate(2.5px, 7px);
   }
 
   58% {
-    transform: translateY(-1.6px);
+    transform: translate(-1.8px, -3.2px);
   }
 
   78% {
-    transform: translateY(0.7px);
+    transform: translate(0.8px, 1.4px);
   }
 
   100% {
-    transform: translateY(0);
+    transform: translate(0, 0);
   }
 }
 

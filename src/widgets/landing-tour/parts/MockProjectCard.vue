@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { FolderKanban, Globe, Lock } from '@lucide/vue'
+import type { Component } from 'vue'
 
 /**
  * Мок-карточка проекта — повторяет реальный ProjectCard:
- * Card (rounded-xl, shadow-sm) с иконкой FolderKanban на primary/10 и meta-строкой.
+ * Card (rounded-xl, shadow-sm) с плиткой-аватаром и meta-строкой. Плитка по
+ * умолчанию — FolderKanban на primary/10; публичные проекты получают свои
+ * иконку и цветной тон (AVATARS в ProjectsScreen).
  * Режим морфинга (assembling): щит прозрачен, части скрыты — карточка «собирается»
  * под прибывающей панелью формы; assembled включает проявление частей с задержками
  * (CSS-хореография .tour-morph-card в ProductTour).
@@ -21,6 +24,10 @@ withDefaults(
     assembling?: boolean
     /** Части собраны — проявляются с задержками, щит обретает карточные цвета. */
     assembled?: boolean
+    /** Иконка аватара (по умолчанию — FolderKanban). */
+    avatarIcon?: Component
+    /** Цветной тон аватара: классы светлой и тёмной темы для плитки. */
+    avatarTone?: string
   }>(),
   {
     description: '',
@@ -41,9 +48,10 @@ withDefaults(
     <div class="flex items-start gap-4 px-6">
       <span
         data-tour-card="icon"
-        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+        :class="avatarTone ?? 'bg-primary/10 text-primary'"
       >
-        <FolderKanban class="h-5 w-5" />
+        <component :is="avatarIcon ?? FolderKanban" class="h-5 w-5" />
       </span>
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2">

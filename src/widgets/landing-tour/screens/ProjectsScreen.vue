@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { animate, Motion, motionValue } from 'motion-v'
-import { computed, nextTick, ref, watch } from 'vue'
-import { Check, Plus } from '@lucide/vue'
+import { computed, nextTick, ref, watch, type Component } from 'vue'
+import { Activity, Check, Paintbrush, Plus, Smartphone } from '@lucide/vue'
 import { VIEW_H, VIEW_W, tourState } from '../tourState'
 import MockField from '../parts/MockField.vue'
 import MockProjectCard from '../parts/MockProjectCard.vue'
@@ -22,12 +22,36 @@ import TourSparkles from '../parts/TourSparkles.vue'
 const state = tourState
 
 const EASE = [0.22, 1, 0.36, 1] as const
+/** Первое приближение к кнопке создания: длинный мягкий заезд с лёгким перелётом. */
+const BTN_EASE = [0.509, 0.008, 0.243, 1.002] as const
+/** Длительность этого заезда — заметно длиннее обычной подводки камеры. */
+const BTN_GLIDE = 1.2
 /** Подход к кнопке «Создать проект» — сильный зум на правый верхний угол. */
 const ZOOM_BTN = 1.6
 /** Весь блок формы диалога. */
 const ZOOM_FORM = 1.18
 /** Подводка заполняемого поля к центру сцены. */
 const ZOOM_FIELD = 1.28
+
+/**
+ * Аватарки публичных проектов — тот же приём, что у цветных бейджей в приложении:
+ * набор классов светлой и тёмной темы на ключ, но в мягком весе плитки карточки
+ * (заливка 10%, как у primary/10); иконка — под смысл проекта.
+ */
+const AVATARS: Record<string, { icon: Component; tone: string }> = {
+  'landing-redesign': {
+    icon: Paintbrush,
+    tone: 'bg-blue-500/10 text-blue-600 dark:bg-blue-400/15 dark:text-blue-400',
+  },
+  'mobile-client': {
+    icon: Smartphone,
+    tone: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-400',
+  },
+  'status-page': {
+    icon: Activity,
+    tone: 'bg-orange-500/10 text-orange-600 dark:bg-orange-400/15 dark:text-orange-400',
+  },
+}
 
 const rootRef = ref<HTMLElement | null>(null)
 const camX = motionValue(0)
@@ -69,6 +93,8 @@ let morphGen = 0
 
 /** Сотрясение страницы от удара «штампа» — карточка прилипает с весом. */
 const shaking = ref(false)
+/** Таймер снятия сотрясения: незавершённый от прошлого удара глушится новым */
+let thudTimer: ReturnType<typeof setTimeout> | undefined
 
 /** Ключи точек, у которых карточка появилась — в них рисуются брызги и вспышки. */
 const bursts = ref<Set<string>>(new Set())
@@ -80,12 +106,16 @@ function burstAt(key: string): void {
 }
 
 function thud(): void {
+  // Глушим таймер прошлого удара — иначе он снимет класс с нового сотрясения,
+  // не дав ему проиграть: карточки прилетают через 520ms, а таймер жил 560ms
+  if (thudTimer !== undefined) clearTimeout(thudTimer)
   // Сброс класса перед добавлением — иначе анимация не перезапустится
   shaking.value = false
   void nextTick(() => {
     shaking.value = true
-    setTimeout(() => {
+    thudTimer = setTimeout(() => {
       shaking.value = false
+      thudTimer = undefined
     }, 560)
   })
 }
@@ -107,7 +137,11 @@ const panelStyle = computed(() => {
  * обратно в лейаут-координаты сцены с учётом текущего трансформа камеры:
  * screen = (layout − C)·z + смещение + C.
  */
-async function centerOn(selector: string, zoom: number): Promise<void> {
+async function centerOn(
+  selector: string,
+  zoom: number,
+  glide?: { duration?: number; ease?: readonly [number, number, number, number] },
+): Promise<void> {
   await nextTick()
   const root = rootRef.value
   const el = root?.querySelector<HTMLElement>(selector)
@@ -119,9 +153,11 @@ async function centerOn(selector: string, zoom: number): Promise<void> {
   const screenY = ((rect.top + rect.height / 2 - rootRect.top) / rootRect.height) * VIEW_H
   const layoutX = (screenX - camX.get() - VIEW_W / 2) / camZ.get() + VIEW_W / 2
   const layoutY = (screenY - camY.get() - VIEW_H / 2) / camZ.get() + VIEW_H / 2
-  animate(camX, -(layoutX - VIEW_W / 2) * zoom, { duration: 0.75, ease: EASE })
-  animate(camY, -(layoutY - VIEW_H / 2) * zoom, { duration: 0.75, ease: EASE })
-  animate(camZ, zoom, { duration: 0.75, ease: EASE })
+  const duration = glide?.duration ?? 0.75
+  const ease = glide?.ease ?? EASE
+  animate(camX, -(layoutX - VIEW_W / 2) * zoom, { duration, ease })
+  animate(camY, -(layoutY - VIEW_H / 2) * zoom, { duration, ease })
+  animate(camZ, zoom, { duration, ease })
 }
 
 function resetCamera(): void {
@@ -231,8 +267,12 @@ async function morphDialogToCard(): Promise<void> {
   panel.getBoundingClientRect()
   resetCamera()
 
-  // Форма увядает, панель перелетает к карточке и перекрашивается под неё
+  // Форма увядает, затемнение уходит сразу после отправки — плавно, а не рывком
+  if (overlayRef.value) {
+    void animate(overlayRef.value, { opacity: 0 }, { duration: 0.45, ease: EASE })
+  }
   if (content) void animate(content, { opacity: 0 }, { duration: 0.2, ease: EASE })
+  // Панель тем же кадром перелетает к карточке и перекрашивается под неё
   panelBox.value = toPx(to)
   boxCard.value = true
 
@@ -287,8 +327,10 @@ async function morphDialogToCard(): Promise<void> {
 watch(
   () => state.focused,
   (key) => {
-    if (key === 'new-project-btn') void centerOn(`[data-tour="${key}"]`, ZOOM_BTN)
-    else if (key?.startsWith('dialog-')) void centerOn(`[data-tour="${key}"]`, ZOOM_FIELD)
+    if (key === 'new-project-btn') {
+      // Первое приближение — длиннее и мягче остальных подводок камеры
+      void centerOn(`[data-tour="${key}"]`, ZOOM_BTN, { duration: BTN_GLIDE, ease: BTN_EASE })
+    } else if (key?.startsWith('dialog-')) void centerOn(`[data-tour="${key}"]`, ZOOM_FIELD)
   },
 )
 
@@ -428,6 +470,8 @@ watch(
                 :description="project.description"
                 :date="project.date"
                 is-public
+                :avatar-icon="AVATARS[project.name]?.icon"
+                :avatar-tone="AVATARS[project.name]?.tone"
               />
               <TourBurst v-if="bursts.has(`pub-${index}`)" class="absolute top-11 left-11" />
               <TourSparkles v-if="bursts.has(`pub-${index}`)" class="absolute inset-0" />
@@ -448,7 +492,7 @@ watch(
           <div
             ref="dialogRef"
             data-tour="dialog-card"
-            class="tour-depth-front absolute top-1/2 left-1/2 w-[512px] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background shadow-lg"
+            class="tour-depth-front absolute top-1/2 left-1/2 w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background shadow-lg"
             :class="[morphing && 'tour-morph-box', boxCard && 'is-card']"
             :style="panelStyle"
           >

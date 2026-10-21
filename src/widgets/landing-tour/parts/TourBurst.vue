@@ -5,6 +5,9 @@ import { computed } from 'vue'
  * ASCII-брызги в точке появления: глифы разлетаются по кругу и замирают
  * (анимация .tour-ascii-glyph из ProductTour — та же, что у вспышки клика).
  * Ставится absolute в нужную точку, живёт ~0.55s, дальше убирается снаружи.
+ *
+ * Рассеивание (углы, дальности, задержки, повороты) берётся из общего шаблона:
+ * у всех появлений брызги идентичны друг другу — разброс только внутри одного.
  */
 const props = withDefaults(defineProps<{ count?: number; distance?: number }>(), {
   count: 7,
@@ -13,17 +16,31 @@ const props = withDefaults(defineProps<{ count?: number; distance?: number }>(),
 
 const GLYPHS = ['+', 'x', '·', '*', '∘', '·']
 
+/** Запас глифов в общем шаблоне — инстанс берёт срез по count. */
+const MAX_GLYPHS = 16
+
+/** Общий набор рассеиваний — фиксирован один раз на модуле. */
+const BURST_TEMPLATE = Array.from({ length: MAX_GLYPHS }, () => ({
+  angleJitter: Math.random() * 0.6,
+  distFactor: 0.6 + Math.random() * 0.7,
+  char: GLYPHS[Math.floor(Math.random() * GLYPHS.length)] as string,
+  rot: Math.round(Math.random() * 180 - 90),
+  delay: Math.round(Math.random() * 120),
+}))
+
 const glyphs = computed(() =>
   Array.from({ length: props.count }, (_, index) => {
-    const angle = (index / props.count) * Math.PI * 2 + Math.random() * 0.6
-    const dist = props.distance * (0.6 + Math.random() * 0.7)
+    const jitter = BURST_TEMPLATE[index % MAX_GLYPHS] as (typeof BURST_TEMPLATE)[number]
+    // Круг строится по числу глифов инстанса, рассеивание — из общего шаблона
+    const angle = (index / props.count) * Math.PI * 2 + jitter.angleJitter
+    const dist = props.distance * jitter.distFactor
     return {
-      char: GLYPHS[Math.floor(Math.random() * GLYPHS.length)] as string,
+      char: jitter.char,
       style: {
         '--tx': `${Math.cos(angle) * dist}px`,
         '--ty': `${Math.sin(angle) * dist}px`,
-        '--rot': `${Math.round(Math.random() * 180 - 90)}deg`,
-        animationDelay: `${Math.round(Math.random() * 120)}ms`,
+        '--rot': `${jitter.rot}deg`,
+        animationDelay: `${jitter.delay}ms`,
       } as Record<string, string>,
     }
   }),

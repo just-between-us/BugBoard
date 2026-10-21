@@ -7,10 +7,17 @@ import { computed } from 'vue'
  * наружу, замирая. Цвет — контрастный тексту (var(--foreground)): белый в тёмной
  * теме, тёмный в светлой. Ставится absolute inset-0 поверх карточки,
  * живёт ~0.8s, снимается снаружи.
+ *
+ * Шаблон генерируется один раз на модуле: каждая появившаяся карточка получает
+ * одинаковые позиции, задержки и длительности — все появления идентичны
+ * друг другу, разброс только внутри одной вспышки.
  */
-const props = withDefaults(defineProps<{ count?: number }>(), { count: 32 })
+const props = withDefaults(defineProps<{ count?: number }>(), { count: 56 })
 
 const GLYPHS = ['·', '+', '∘', '×', '*', '∙', '·', '+']
+
+/** Запас частиц в общем шаблоне — инстанс берёт срез по count. */
+const MAX_SPARKS = 64
 
 /** Точка у края карточки: сторона периметра + разлёт наружу от неё. */
 function edgeSpot() {
@@ -48,23 +55,24 @@ function edgeSpot() {
   }
 }
 
-const particles = computed(() =>
-  Array.from({ length: props.count }, () => {
-    const spot = edgeSpot()
-    return {
-      char: GLYPHS[Math.floor(Math.random() * GLYPHS.length)] as string,
-      style: {
-        left: `${spot.left}%`,
-        top: `${spot.top}%`,
-        '--sx': `${Math.round(spot.sx)}px`,
-        '--sy': `${Math.round(spot.sy)}px`,
-        animationDelay: `${Math.round(Math.random() * 260)}ms`,
-        animationDuration: `${420 + Math.round(Math.random() * 260)}ms`,
-        fontSize: `${9 + Math.round(Math.random() * 3)}px`,
-      } as Record<string, string>,
-    }
-  }),
-)
+/** Общий набор частиц — позиции, глифы, задержки и размеры фиксированы. */
+const SPARK_TEMPLATE = Array.from({ length: MAX_SPARKS }, () => {
+  const spot = edgeSpot()
+  return {
+    char: GLYPHS[Math.floor(Math.random() * GLYPHS.length)] as string,
+    style: {
+      left: `${spot.left}%`,
+      top: `${spot.top}%`,
+      '--sx': `${Math.round(spot.sx)}px`,
+      '--sy': `${Math.round(spot.sy)}px`,
+      animationDelay: `${Math.round(Math.random() * 260)}ms`,
+      animationDuration: `${420 + Math.round(Math.random() * 260)}ms`,
+      fontSize: `${10 + Math.round(Math.random() * 3)}px`,
+    } as Record<string, string>,
+  }
+})
+
+const particles = computed(() => SPARK_TEMPLATE.slice(0, props.count))
 </script>
 
 <template>
