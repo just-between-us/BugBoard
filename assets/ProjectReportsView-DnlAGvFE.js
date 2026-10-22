@@ -1,0 +1,1 @@
+import{k as e,mt as t,v as n}from"./runtime-core.esm-bundler-B8D2lM98.js";import{t as r}from"./ProjectSectionPage-BZWZDtWs.js";var i=e({__name:`ProjectReportsView`,setup(e){return(e,i)=>(t(),n(r,{section:`reports`}))}});export{i as default};

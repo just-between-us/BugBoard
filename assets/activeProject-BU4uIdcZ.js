@@ -1,1 +1,0 @@
-import{vn as e}from"./runtime-core.esm-bundler-B8D2lM98.js";import{y as t}from"./useApi-BPuI6ZR9-Dx1ppA3l.js";var n=`bugboard-active-project`;function r(){return localStorage.getItem(n)}var i=t(`activeProject`,()=>{let t=e(r());function i(e){t.value=e,e?localStorage.setItem(n,e):localStorage.removeItem(n)}return{activeProjectId:t,setActiveProject:i}});export{i as t};
