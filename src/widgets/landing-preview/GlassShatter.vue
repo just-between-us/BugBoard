@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as THREE from 'three'
 import { Delaunay } from 'd3-delaunay'
+import { GLASS_REVEAL_SECONDS } from './glassReveal'
 
 interface Props {
-  image: string
+  /** Картинка под стеклом. Без неё — «живое» стекло: полупрозрачный
+   *  оверлей поверх DOM (преломляется не картинка, а стеклянный оттенок). */
+  image?: string
   shardCount?: number
   shardGap?: number
   /** Базовый подъём осколков в глубину, px. */
@@ -21,9 +24,14 @@ interface Props {
   crackOpacity?: number
   /** Цвет трещин: 0 — темнее, 1 — светлее. */
   crackTone?: number
+  /** Встроенная подсказка «Починить...». */
+  showHint?: boolean
+  /** Стартовать уже разбитым: статичная картина удара (reduced motion). */
+  startShattered?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  image: '',
   shardCount: 18,
   shardGap: 18,
   depth: 30,
@@ -34,7 +42,13 @@ const props = withDefaults(defineProps<Props>(), {
   dirtStrength: 1,
   crackOpacity: 0.5,
   crackTone: 0.5,
+  showHint: true,
+  startShattered: false,
 })
+
+/** Без картинки стекло лежит поверх живого контента: фон прозрачный,
+ *  материал полупрозрачный (см. createShard и вывод alpha в шейдере). */
+const contentless = computed(() => !props.image)
 
 const container = ref<HTMLDivElement | null>(null)
 const webglLayer = ref<HTMLDivElement | null>(null)
@@ -79,9 +93,10 @@ const CRACK_WAVE_SPEED = 2000
 
 /*
  * Появление целого стекла: заполнение контейнера от краёв.
+ * Длительность — общая с финалом Product Tour (см. glassReveal.ts).
  */
 
-const REVEAL_DURATION = 1.4
+const REVEAL_DURATION = GLASS_REVEAL_SECONDS
 let revealProgress = 0
 
 interface Shard {
@@ -165,6 +180,8 @@ const fragmentShader = /* glsl */ `
   uniform float uDirtStrength;
   uniform float uCrackOpacity;
   uniform float uCrackTone;
+  uniform float uAlpha;
+  uniform float uContentless;
 
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -324,6 +341,19 @@ const fragmentShader = /* glsl */ `
 
     vec3 refractedColor =
       vec3(red, green, blue);
+
+    /*
+     * Без картинки под стеклом (живой контент): преломляется
+     * не текстура, а стеклянный оттенок — под осколками видна
+     * настоящая страница.
+     */
+
+    refractedColor =
+      mix(
+        refractedColor,
+        vec3(0.62, 0.76, 0.9),
+        uContentless
+      );
 
     /*
      * -----------------------------------------------------
@@ -562,10 +592,28 @@ const fragmentShader = /* glsl */ `
       (1.0 - color) *
       (1.0 - clamp(glow, 0.0, 1.0));
 
+    /*
+     * uAlpha = 1 — непрозрачное стекло над картинкой, как было.
+     * Меньше — живое стекло: прозрачная база, а кромки, блики
+     * и трещины добавляют плотности поверх неё.
+     */
+
+    float glassAlpha =
+      1.0 -
+      (1.0 - uAlpha) *
+      (1.0 - clamp(
+        fresnel * 0.5 +
+        specular * 0.3 +
+        broadHighlight * 0.05 +
+        crackLine * uCrackOpacity * 0.5,
+        0.0,
+        1.0
+      ));
+
     gl_FragColor =
       vec4(
         color,
-        1.0
+        glassAlpha
       );
 
     /*
@@ -642,13 +690,24 @@ async function init() {
    * Texture
    */
 
-  previewTexture = await loadTexture(props.image)
+  if (props.image) {
+    previewTexture = await loadTexture(props.image)
 
-  previewTexture.colorSpace = THREE.SRGBColorSpace
+    previewTexture.colorSpace = THREE.SRGBColorSpace
 
-  previewTexture.minFilter = THREE.LinearFilter
+    previewTexture.minFilter = THREE.LinearFilter
 
-  previewTexture.magFilter = THREE.LinearFilter
+    previewTexture.magFilter = THREE.LinearFilter
+  } else {
+    /*
+     * Живое стекло: преломлять нечего — 1×1 прозрачная текстура,
+     * оттенок и прозрачность задаёт шейдер (uContentless / uAlpha).
+     */
+
+    previewTexture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1)
+
+    previewTexture.needsUpdate = true
+  }
 
   /*
    * Грязь: пятна, разводы от протирки, пыль.
@@ -667,6 +726,19 @@ async function init() {
    */
 
   resize()
+
+  /*
+   * Старт уже разбитым (reduced motion): волна трещин завершена,
+   * осколки в покое — статичная картина удара без анимации.
+   */
+
+  if (props.startShattered) {
+    shatterOrigin.set(container.value.clientWidth / 2, container.value.clientHeight / 2)
+
+    shattered.value = true
+    crackTime = CRACK_DURATION
+    revealProgress = 1
+  }
 
   /*
    * Generate Voronoi shards.
@@ -1531,17 +1603,28 @@ function createShard(polygon: [number, number][], center: THREE.Vector2, baseSca
       uShardSeed: {
         value: Math.random(),
       },
+
+      uAlpha: {
+        value: contentless.value ? 0.12 : 1,
+      },
+
+      uContentless: {
+        value: contentless.value ? 1 : 0,
+      },
     },
 
     /*
      * Непрозрачный материал: при alpha < 1 соседние треугольники
      * блендятся дважды на общих рёбрах (MSAA-сэмпл попадает в оба)
      * — по геометрии осколков светятся тонкие диагональные швы.
+     *
+     * Живое стекло (без картинки) — сознательное исключение:
+     * полупрозрачность важнее, а швы на базе alpha 0.12 не читаются.
      */
 
-    transparent: false,
+    transparent: contentless.value,
 
-    depthWrite: true,
+    depthWrite: !contentless.value,
 
     side: THREE.DoubleSide,
   })
@@ -1668,13 +1751,27 @@ function handlePointerLeave() {
  */
 
 function handlePointerDown(event: PointerEvent) {
-  if (shattered.value || !container.value) {
+  if (!container.value) {
     return
   }
 
   const rect = container.value.getBoundingClientRect()
 
-  shatterOrigin.set(event.clientX - rect.left, event.clientY - rect.top)
+  shatterAt(event.clientX - rect.left, event.clientY - rect.top)
+}
+
+/*
+ * Удар в точке контейнера (px от его левого верхнего угла) —
+ * снаружи через ref: клики сценария тура визуальные,
+ * реального pointerdown там не бывает.
+ */
+
+function shatterAt(x: number, y: number) {
+  if (shattered.value) {
+    return
+  }
+
+  shatterOrigin.set(x, y)
 
   flash.value.x = shatterOrigin.x
   flash.value.y = shatterOrigin.y
@@ -1748,7 +1845,7 @@ function restoreGlass() {
   generateShards()
 }
 
-defineExpose({ restore: restoreGlass })
+defineExpose({ restore: restoreGlass, shatterAt })
 
 /*
  * ---------------------------------------------------------
@@ -1848,7 +1945,11 @@ function animate() {
      * читается как параллакс. Пружина гасит колебания.
      */
 
-    const float = Math.sin(elapsed * 0.45 + shard.random * 10) * 5
+    /*
+     * Статичный старт (reduced motion): дрейф выключен, осколки в покое.
+     */
+
+    const float = props.startShattered ? 0 : Math.sin(elapsed * 0.45 + shard.random * 10) * 5
 
     /*
      * Целая панель держится строго в z = 0: любой дрейф
@@ -1997,20 +2098,24 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="container" class="glass-shatter-preview" :class="{ 'is-shattered': shattered }">
+  <div
+    ref="container"
+    class="glass-shatter-preview"
+    :class="{ 'is-shattered': shattered, 'is-contentless': contentless }"
+  >
     <div class="glass-shatter-preview__content">
-      <img :src="image" alt="" draggable="false" />
+      <img v-if="image" :src="image" alt="" draggable="false" />
 
-      <div class="glass-shatter-preview__overlay" />
+      <div v-if="image" class="glass-shatter-preview__overlay" />
 
       <div class="glass-shatter-preview__fracture" :class="{ 'is-active': shattered }" />
     </div>
 
     <div ref="webglLayer" class="glass-shatter-preview__webgl" />
 
-    <div v-if="!shattered" class="glass-shatter-preview__hint">
+    <div v-if="showHint && !shattered" class="glass-shatter-preview__hint">
       <span class="glass-shatter-preview__hint-dot" />
-      Нажми, чтобы разбить
+      Починить...
     </div>
 
     <div
@@ -2035,6 +2140,10 @@ onBeforeUnmount(() => {
 }
 .glass-shatter-preview.is-shattered {
   cursor: crosshair;
+}
+/* Живое стекло: под ним настоящий контент страницы — фон контейнера прозрачный */
+.glass-shatter-preview.is-contentless {
+  background: transparent;
 }
 .glass-shatter-preview__content {
   position: absolute;
@@ -2097,14 +2206,14 @@ onBeforeUnmount(() => {
   z-index: 3;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 10px;
+  padding: 10px 18px;
   border: 1px solid rgb(255 255 255 / 0.18);
   border-radius: 999px;
   background: rgb(9 12 18 / 0.55);
   backdrop-filter: blur(8px);
   color: rgb(255 255 255 / 0.92);
-  font-size: 13px;
+  font-size: 18px;
   letter-spacing: 0.01em;
   transform: translate(-50%, -50%);
   pointer-events: none;

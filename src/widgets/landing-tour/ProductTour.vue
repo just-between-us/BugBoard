@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Motion } from 'motion-v'
-import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, SkipForward } from '@lucide/vue'
 import { useTour } from './useTour'
 import TourStage from './TourStage.vue'
 
@@ -76,6 +76,17 @@ const pad = (i: number) => String(i + 1).padStart(2, '0')
         >
           <span class="font-mono text-[11px] pt-0.5">{{ pad(index) }}</span>
           {{ step.label }}
+        </button>
+        <!-- Debug: сразу к конечной заставке шага 07 (поток репортов и стекло),
+             минуя демо-часть шага — см. TourRunOpts.finale в choreography.ts -->
+        <button
+          type="button"
+          title="Debug: прыжок к конечной заставке шага 07"
+          class="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:bg-secondary/60 hover:text-foreground"
+          @click="tour.goToFinale()"
+        >
+          <SkipForward class="h-3 w-3" />
+          Debug: финал
         </button>
         <div class="flex shrink-0 items-center gap-1">
           <button

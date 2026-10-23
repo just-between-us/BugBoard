@@ -8,18 +8,41 @@ import MockField from './MockField.vue'
  * статус и флаг отдельными дропдаунами, ответ репортёру,
  * чип привязки и футер действий («Ответить», «Баг», «Удалить»).
  * Клик по карточке открывает страницу репорта — якорь report-card.
+ * Данные репорта — пропсы: дефолты в точности повторяют демо-карточку шага.
  */
 withDefaults(
   defineProps<{
-    status: 'new' | 'confirmed' | 'rejected'
-    menuOpen: boolean
-    replyOpen: boolean
-    replyText: string
-    replySent: boolean
-    linked: boolean
+    status?: 'new' | 'confirmed' | 'rejected'
+    menuOpen?: boolean
+    replyOpen?: boolean
+    replyText?: string
+    replySent?: boolean
+    linked?: boolean
     replyFocused?: boolean
+    /** Якорь report-card ставит только карточка шага — флуд-карточкам он не нужен. */
+    cardAnchor?: boolean
+    reportTitle?: string
+    reportBody?: string
+    authorName?: string
+    authorInitials?: string
+    reportDate?: string
   }>(),
-  { replyFocused: false },
+  {
+    status: 'new',
+    menuOpen: false,
+    replyOpen: false,
+    replyText: '',
+    replySent: false,
+    linked: false,
+    replyFocused: false,
+    cardAnchor: true,
+    reportTitle: 'Кнопка входа через GitHub не работает',
+    reportBody:
+      'После клика «Войти через GitHub» окно закрывается, аккаунт не создаётся. На Safari 17 воспроизводится стабильно.',
+    authorName: 'Дмитрий К.',
+    authorInitials: 'ДК',
+    reportDate: '18 окт 2025, 14:02',
+  },
 )
 
 const STATUS_LABEL: Record<string, string> = {
@@ -34,7 +57,7 @@ const STATUS_OPTIONS = ['new', 'confirmed', 'rejected'] as const
 <template>
   <!-- Card: gap-0 py-0 overflow-hidden, клик по карточке ведёт на страницу репорта -->
   <article
-    data-tour="report-card"
+    :data-tour="cardAnchor ? 'report-card' : undefined"
     class="flex cursor-pointer flex-col gap-0 overflow-hidden rounded-xl border bg-card py-0 shadow-sm transition-shadow hover:shadow-md"
   >
     <div class="space-y-3 p-4 sm:p-5">
@@ -44,13 +67,13 @@ const STATUS_OPTIONS = ['new', 'confirmed', 'rejected'] as const
           <span
             class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-medium text-primary"
           >
-            ДК
+            {{ authorInitials }}
           </span>
           <div class="min-w-0">
             <span class="block truncate text-sm font-medium underline-offset-4 hover:underline">
-              Дмитрий К.
+              {{ authorName }}
             </span>
-            <p class="text-xs text-muted-foreground">18 окт 2025, 14:02</p>
+            <p class="text-xs text-muted-foreground">{{ reportDate }}</p>
             <span class="mt-0.5 flex min-w-0 max-w-full items-center gap-0.5">
               <span class="truncate font-mono text-xs text-muted-foreground">ID: 7f2a…c19</span>
               <span class="relative inline-flex shrink-0">
@@ -114,11 +137,10 @@ const STATUS_OPTIONS = ['new', 'confirmed', 'rejected'] as const
       <!-- Заголовок и описание -->
       <div>
         <span class="block wrap-break-word font-medium underline-offset-4 hover:underline">
-          Кнопка входа через GitHub не работает
+          {{ reportTitle }}
         </span>
         <p class="mt-1 wrap-break-word text-sm whitespace-pre-line text-muted-foreground">
-          После клика «Войти через GitHub» окно закрывается, аккаунт не создаётся. На Safari 17
-          воспроизводится стабильно.
+          {{ reportBody }}
         </p>
       </div>
 

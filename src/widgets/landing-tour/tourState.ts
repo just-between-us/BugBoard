@@ -88,6 +88,18 @@ export const tourState = reactive({
   replySent: false,
   linked: false,
 
+  // Шаг 7 — финал: репорты заваливают окно и оно зарастает стеклом
+  /** Шапка проекта и вкладки скрыты вверх — секция репортов на всю высоту. */
+  chromeHidden: false,
+  /** Сколько репортов потока уже встроилось в список (штампом в конец ленты). */
+  floodCount: 0,
+  /** Прокрутка ленты вниз по мере роста списка — хвост всегда в кадре (логические px). */
+  floodScroll: 0,
+  /** Стекло над окном: 'on' — заросло (после разбивания остаётся осколками). */
+  glassPhase: 'off' as 'off' | 'on',
+  /** Reduced motion: стекло сразу разбитое — статичная картина финала. */
+  glassBroken: false,
+
   /** Ключ заполненного поля — по нему рисуется мигающая каретка. */
   focused: '',
 
@@ -134,6 +146,11 @@ export function resetTourState(): void {
     replyText: '',
     replySent: false,
     linked: false,
+    chromeHidden: false,
+    floodCount: 0,
+    floodScroll: 0,
+    glassPhase: 'off',
+    glassBroken: false,
     focused: '',
     epoch: tourState.epoch + 1,
   })

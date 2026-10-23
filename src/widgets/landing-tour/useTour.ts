@@ -2,7 +2,7 @@ import { onBeforeUnmount, ref, type Ref } from 'vue'
 import { animate, motionValue, type MotionValue } from 'motion-v'
 import { useMediaQuery } from '@vueuse/core'
 import { tourState, VIEW_W, VIEW_H } from './tourState'
-import { steps, type TourCtx, type TourStep } from './choreography'
+import { steps, type TourCtx, type TourRunOpts, type TourStep } from './choreography'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 /** Более «ручная» кривая для живой дуги: разгон и торможение без резкого старта. */
@@ -239,6 +239,13 @@ export function useTour() {
       click: (target) => click(target, t),
       type: (target, fieldKey, text, setter, opts) => type(target, fieldKey, text, setter, opts, t),
       wait: (ms) => sleep(ms, t),
+      hideCursor: async () => {
+        try {
+          await animate(cursorOpacity, 0, { duration: 0.5 }).finished
+        } catch {
+          /* отмена цепочки гасит анимацию — гасим без ожидания */
+        }
+      },
     }
   }
 
@@ -257,9 +264,11 @@ export function useTour() {
     cursorX.stop()
     cursorY.stop()
     cursorRot.set(0)
+    // Гаснение курсора (финал без курсора) не должно пережить новый запуск
+    cursorOpacity.stop()
   }
 
-  async function runChain(index: number): Promise<void> {
+  async function runChain(index: number, opts?: TourRunOpts): Promise<void> {
     cancelRun()
     const t: Token = { cancelled: false, onCancel: [] }
     token = t
@@ -289,7 +298,8 @@ export function useTour() {
       let i = index
       for (;;) {
         check(t)
-        await stepAt(i).run(makeCtx(t))
+        // Опции относятся только к шагу, с которого стартовала цепочка
+        await stepAt(i).run(makeCtx(t), i === index ? opts : undefined)
         check(t)
         if (i >= steps.length - 1) break
         await sleep(700, t)
@@ -321,8 +331,20 @@ export function useTour() {
     if (!paused.value) releaseWaiters()
   }
 
-  function goTo(index: number): void {
-    void runChain(Math.max(0, Math.min(steps.length - 1, index)))
+  /** Опции последнего goTo — «Повторить шаг» воспроизводит то же самое. */
+  let lastOpts: TourRunOpts | undefined
+
+  function goTo(index: number, opts?: TourRunOpts): void {
+    lastOpts = opts
+    void runChain(Math.max(0, Math.min(steps.length - 1, index)), opts)
+  }
+
+  /**
+   * Debug-прыжок: сразу к конечной заставке последнего шага (поток репортов
+   * и стекло) — демо-часть шага не играется (см. TourRunOpts.finale).
+   */
+  function goToFinale(): void {
+    goTo(steps.length - 1, { finale: true })
   }
 
   onBeforeUnmount(() => {
@@ -348,7 +370,8 @@ export function useTour() {
     startOnce,
     togglePause,
     goTo,
-    restartStep: () => goTo(current.value),
+    goToFinale,
+    restartStep: () => goTo(current.value, lastOpts),
     next: () => goTo(current.value + 1),
     prev: () => goTo(current.value - 1),
     restartAll: () => goTo(0),

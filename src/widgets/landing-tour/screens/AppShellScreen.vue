@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import {
   AlertTriangle,
   ArrowUpDown,
@@ -21,7 +21,8 @@ import {
   Users,
   X,
 } from '@lucide/vue'
-import { tourState, type TourTab } from '../tourState'
+import { tourState, VIEW_H, type TourTab } from '../tourState'
+import { FLOOD_REPORTS } from '../lib/floodReports'
 import MockBugCard from '../parts/MockBugCard.vue'
 import MockReportCard from '../parts/MockReportCard.vue'
 import MockSidebar from '../parts/MockSidebar.vue'
@@ -88,6 +89,32 @@ const visibleBugs = computed(() => {
   const list = bugs.map((bug, i) => (i === 0 ? { ...bug, status: state.bugPageStatus } : bug))
   return state.bugStatus === 'all' ? list : list.filter((bug) => bug.status === 'in_progress')
 })
+
+// Финал шага «Репорты»: поток репортов встраивается в список — каждый прилетает
+// штампом в конец ленты
+const listFlood = computed(() => FLOOD_REPORTS.slice(0, state.floodCount))
+
+const listRef = ref<HTMLElement | null>(null)
+
+/*
+ * Список растёт — страница подкручивается сама: в кадре остаются хвост ленты
+ * (последняя карточка потока — последний ребёнок группы штампов) и прилетающая
+ * следом. offsetTop не зависит от transform, поэтому замер устойчив к скроллу.
+ */
+watch(
+  () => state.floodCount,
+  async (count) => {
+    if (count <= 0) {
+      state.floodScroll = 0
+      return
+    }
+    await nextTick()
+    const flood = listRef.value?.lastElementChild
+    const tail = flood?.lastElementChild ?? flood
+    if (!(tail instanceof HTMLElement)) return
+    state.floodScroll = Math.max(0, Math.round(tail.offsetTop + tail.offsetHeight + 24 - VIEW_H))
+  },
+)
 </script>
 
 <template>
@@ -102,108 +129,124 @@ const visibleBugs = computed(() => {
 
     <main class="relative min-w-0 flex-1 overflow-hidden">
       <!-- Страница проекта — контейнер как в ProjectViewPage (без кнопки «Назад»).
-           translate прокручивает страницу целиком — как скролл браузера в настройках -->
+           translate прокручивает страницу целиком — как скролл браузера в настройках
+           и как поток репортов в финале шага «Репорты» -->
       <div
         class="mx-auto max-w-6xl px-4 py-6 transition-[translate] duration-500 ease-out sm:px-6"
-        :style="{ translate: `0 -${state.settingsScroll}px` }"
+        :style="{ translate: `0 -${state.settingsScroll + state.floodScroll}px` }"
       >
-        <!-- Шапка проекта -->
-        <header class="mb-6 rounded-lg" data-tour="project-header">
-          <div class="flex items-start justify-between gap-4">
-            <div class="min-w-0 flex-1">
-              <div class="flex items-start gap-4">
-                <div class="relative h-12 w-12 shrink-0">
-                  <span
-                    class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-base font-medium text-primary"
-                  >
-                    A
-                  </span>
-                  <span
-                    class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
-                    title="Загрузить аватар"
-                  >
-                    <Camera class="h-3 w-3" />
-                  </span>
-                </div>
-                <div class="min-w-0">
-                  <h1
-                    class="flex items-center gap-4 truncate text-2xl font-semibold tracking-tight"
-                  >
-                    auth-service
-                    <Globe v-if="state.settingsPublic" class="mt-1 h-3.5 w-3.5 shrink-0" />
-                    <Lock v-else class="mt-1 h-3.5 w-3.5 shrink-0" />
-                  </h1>
-                  <p class="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                    Сервис авторизации и входа
-                  </p>
-                  <div class="mt-4 flex flex-col gap-1 text-xs text-muted-foreground">
-                    <span class="min-w-0 truncate font-mono"
-                      >ID: a3f1b27c-8d44-4e19-9f61-2ac5e8a39d2c</span
-                    >
-                    <span>Создан: 18 окт. 2026 г.</span>
+        <!-- Шапка и вкладки: в финале шага «Репорты» уезжают вверх —
+             секция репортов занимает почти всю высоту окна.
+             grid-rows 1fr→0fr анимирует реальную высоту, поэтому контент
+             внизу поднимается равномерно всю анимацию (max-h двигал бы
+             его только в хвосте) -->
+        <div
+          class="grid transition-[grid-template-rows] duration-700 ease-in-out motion-reduce:transition-none"
+          :class="state.chromeHidden ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'"
+        >
+          <div
+            class="min-h-0 transition-all duration-700 ease-in-out motion-reduce:transition-none"
+            :class="state.chromeHidden && 'overflow-hidden opacity-0 -translate-y-8'"
+          >
+            <!-- Шапка проекта -->
+            <header class="mb-6 rounded-lg" data-tour="project-header">
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start gap-4">
+                    <div class="relative h-12 w-12 shrink-0">
+                      <span
+                        class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-base font-medium text-primary"
+                      >
+                        A
+                      </span>
+                      <span
+                        class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+                        title="Загрузить аватар"
+                      >
+                        <Camera class="h-3 w-3" />
+                      </span>
+                    </div>
+                    <div class="min-w-0">
+                      <h1
+                        class="flex items-center gap-4 truncate text-2xl font-semibold tracking-tight"
+                      >
+                        auth-service
+                        <Globe v-if="state.settingsPublic" class="mt-1 h-3.5 w-3.5 shrink-0" />
+                        <Lock v-else class="mt-1 h-3.5 w-3.5 shrink-0" />
+                      </h1>
+                      <p class="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                        Сервис авторизации и входа
+                      </p>
+                      <div class="mt-4 flex flex-col gap-1 text-xs text-muted-foreground">
+                        <span class="min-w-0 truncate font-mono"
+                          >ID: a3f1b27c-8d44-4e19-9f61-2ac5e8a39d2c</span
+                        >
+                        <span>Создан: 18 окт. 2026 г.</span>
+                      </div>
+                      <span class="font-mono text-xs text-primary">Вы владелец</span>
+                    </div>
                   </div>
-                  <span class="font-mono text-xs text-primary">Вы владелец</span>
+                </div>
+                <div v-if="state.settingsPublic" class="ml-auto flex shrink-0 items-center gap-1">
+                  <!-- Реальный контроль — Button outline sm поверх <a target="_blank"> (Send) -->
+                  <span
+                    data-tour="header-link"
+                    class="inline-flex h-8 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md border bg-background px-2.5 text-sm font-medium shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+                  >
+                    <Send class="h-3.5 w-3.5 shrink-0" />
+                    Ссылка для репортёров
+                  </span>
+                  <span class="relative inline-flex">
+                    <Transition name="tour-copy-tip">
+                      <span
+                        v-if="state.copied"
+                        class="absolute bottom-full left-1/2 z-10 mb-1.5 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded bg-green-600 px-2 py-0.5 text-xs text-white shadow-sm"
+                      >
+                        Ссылка скопирована
+                        <Check class="h-3.5 w-3.5" />
+                      </span>
+                    </Transition>
+                    <button
+                      type="button"
+                      data-tour="header-copy"
+                      class="inline-flex items-center justify-center rounded p-0.5 text-muted-foreground transition-colors duration-300 ease-out hover:text-foreground"
+                      title="Копировать ссылку для репортёров"
+                      aria-label="Копировать ссылку для репортёров"
+                    >
+                      <Copy class="h-3.5 w-3.5 ml-2" />
+                    </button>
+                  </span>
                 </div>
               </div>
-            </div>
-            <div v-if="state.settingsPublic" class="ml-auto flex shrink-0 items-center gap-1">
-              <!-- Реальный контроль — Button outline sm поверх <a target="_blank"> (Send) -->
-              <span
-                data-tour="header-link"
-                class="inline-flex h-8 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md border bg-background px-2.5 text-sm font-medium shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
-              >
-                <Send class="h-3.5 w-3.5 shrink-0" />
-                Ссылка для репортёров
-              </span>
-              <span class="relative inline-flex">
-                <Transition name="tour-copy-tip">
-                  <span
-                    v-if="state.copied"
-                    class="absolute bottom-full left-1/2 z-10 mb-1.5 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded bg-green-600 px-2 py-0.5 text-xs text-white shadow-sm"
-                  >
-                    Ссылка скопирована
-                    <Check class="h-3.5 w-3.5" />
-                  </span>
-                </Transition>
-                <button
-                  type="button"
-                  data-tour="header-copy"
-                  class="inline-flex items-center justify-center rounded p-0.5 text-muted-foreground transition-colors duration-300 ease-out hover:text-foreground"
-                  title="Копировать ссылку для репортёров"
-                  aria-label="Копировать ссылку для репортёров"
-                >
-                  <Copy class="h-3.5 w-3.5 ml-2" />
-                </button>
-              </span>
-            </div>
-          </div>
-        </header>
+            </header>
 
-        <!-- Вкладки проекта (p-2 — внутренний отступ под обводку тура) -->
-        <nav class="mb-3 rounded-lg border-b border-border p-2" data-tour="project-tabs">
-          <div class="flex w-max gap-1">
-            <span
-              v-for="tab in tabs"
-              :key="tab.key"
-              :data-tour="`tab-${tab.key}`"
-              class="flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors"
-              :class="
-                state.activeTab === tab.key
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:border-muted hover:text-foreground'
-              "
-            >
-              <component :is="tab.icon" class="h-4 w-4 shrink-0" />
-              <span>{{ tab.label }}</span>
-              <span
-                v-if="tab.count"
-                class="ml-1 inline-flex items-center rounded-full border border-transparent bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground"
-              >
-                {{ tab.count }}
-              </span>
-            </span>
+            <!-- Вкладки проекта (p-2 — внутренний отступ под обводку тура) -->
+            <nav class="mb-3 rounded-lg border-b border-border p-2" data-tour="project-tabs">
+              <div class="flex w-max gap-1">
+                <span
+                  v-for="tab in tabs"
+                  :key="tab.key"
+                  :data-tour="`tab-${tab.key}`"
+                  class="flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors"
+                  :class="
+                    state.activeTab === tab.key
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:border-muted hover:text-foreground'
+                  "
+                >
+                  <component :is="tab.icon" class="h-4 w-4 shrink-0" />
+                  <span>{{ tab.label }}</span>
+                  <span
+                    v-if="tab.count"
+                    class="ml-1 inline-flex items-center rounded-full border border-transparent bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground"
+                  >
+                    {{ tab.count }}
+                  </span>
+                </span>
+              </div>
+            </nav>
           </div>
-        </nav>
+        </div>
 
         <!-- Вкладка «Баги»: поиск, создание, фильтры и сортировка как в BugsFilters -->
         <div v-if="state.activeTab === 'bugs'">
@@ -416,7 +459,8 @@ const visibleBugs = computed(() => {
             </div>
           </div>
 
-          <div class="mt-3 space-y-3">
+          <!-- ref отслеживает хвост ленты: по нему страница подкручивается в финале -->
+          <div ref="listRef" class="mt-3 space-y-3">
             <MockReportCard
               :status="state.reportStatus"
               :menu-open="state.reportMenuOpen"
@@ -427,29 +471,20 @@ const visibleBugs = computed(() => {
               :reply-focused="state.focused === 'report-reply'"
             />
 
-            <!-- Намёк на продолжение списка; якорь для парковки курсора в конце тура -->
-            <div
-              data-tour="park"
-              class="pointer-events-none rounded-xl border bg-card p-4 opacity-50"
-            >
-              <div class="flex items-center gap-2.5">
-                <span
-                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary"
-                >
-                  МС
-                </span>
-                <div class="min-w-0">
-                  <p class="block truncate text-sm font-medium">Мария С.</p>
-                  <p class="text-xs text-muted-foreground">17 окт 2025, 09:15</p>
-                </div>
-              </div>
-              <p class="mt-3 wrap-break-word font-medium">
-                Не открывается страница оплаты после 3D-secure
-              </p>
-              <p class="mt-1 line-clamp-1 text-sm text-muted-foreground">
-                После возврата из банка редирект ведёт на пустую страницу.
-              </p>
-            </div>
+            <!-- Флуд: репорты потока встраиваются в список штампом — по мере
+                 прибытия страница подкручивается, чтобы кадр держал хвост ленты -->
+            <TransitionGroup tag="div" name="tour-stamp" class="space-y-3">
+              <MockReportCard
+                v-for="report in listFlood"
+                :key="report.title"
+                :card-anchor="false"
+                :report-title="report.title"
+                :report-body="report.body"
+                :author-name="report.name"
+                :author-initials="report.initials"
+                :report-date="report.date"
+              />
+            </TransitionGroup>
           </div>
         </div>
 

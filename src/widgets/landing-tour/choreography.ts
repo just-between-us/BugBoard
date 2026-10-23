@@ -1,4 +1,15 @@
 import { tourState } from './tourState'
+import { FLOOD_REPORTS } from './lib/floodReports'
+import { GLASS_REVEAL_SECONDS } from '../landing-preview/glassReveal'
+
+/** Сколько окно зарастает стеклом, мс — заставка выжидает это время после репортов. */
+const GLASS_REVEAL_MS = GLASS_REVEAL_SECONDS * 1000
+
+/** Опции запуска шага — передаются снаружи, через goTo(index, opts). */
+export interface TourRunOpts {
+  /** Debug: сразу к конечной заставке, минуя демо-часть шага. */
+  finale?: boolean
+}
 
 /** Контекст, через который шаги управляют сценой: курсор, клики, ввод, ожидание. */
 export interface TourCtx {
@@ -18,6 +29,8 @@ export interface TourCtx {
   ): Promise<void>
   /** Пауза, уважающая кнопку «Пауза» и отмену запуска. */
   wait(ms: number): Promise<void>
+  /** Убрать курсор со сцены — финал шага идёт без него. */
+  hideCursor(): Promise<void>
 }
 
 export interface TourStep {
@@ -34,7 +47,7 @@ export interface TourStep {
   /** Итоговое состояние — для мгновенного показа (reduced motion). */
   end(): void
   /** Хореография: курсор, клики, смена состояний. */
-  run(ctx: TourCtx): Promise<void>
+  run(ctx: TourCtx, opts?: TourRunOpts): Promise<void>
   /** «Живой» курсор: движение по дуге с наклоном (пока первые два шага). */
   lively?: boolean
 }
@@ -61,6 +74,55 @@ function narrOff(): void {
   s.narr.mode = 'off'
 }
 
+/*
+ * ——— Конечная заставка шага «Репорты» ———
+ *
+ * Молча и без курсора: реплики-пузыри и движение курсора отключены.
+ * Сначала лента заваливается всеми репортами и замирает на финальном
+ * кадре, потом окно зарастает стеклом поверх запечённого мока того же
+ * кадра — и ломает его только реальный клик пользователя.
+ * Отдельная функция, чтобы её можно было запустить напрямую —
+ * debug-кнопка «Финал» минует демо-часть шага.
+ */
+
+/** Состояние шага «Репорты», готовое к заставке (debug-прыжок). */
+function primeReportsFinale(): void {
+  s.reportStatus = 'confirmed'
+  s.replySent = true
+  s.replyText = 'Спасибо! Проверим и починим в ближайшем релизе.'
+  s.linked = true
+}
+
+async function reportsFinale(ctx: TourCtx): Promise<void> {
+  await ctx.hideCursor()
+  // Пауза — и поток начинается сам
+  await ctx.wait(3200)
+  // Шапка и табы уезжают вверх — секция репортов на всю высоту
+  s.chromeHidden = true
+  // Подсветка прошлой цели больше не нужна — её никто не ведёт
+  await ctx.hot(null)
+  await ctx.wait(3400)
+  // Репорты идут валом: каждый встраивается в список штампом в конец ленты,
+  // страница подкручивается сама — в кадре остаётся хвост списка.
+  // Все репорты прилетают до стекла: лента замирает на финальном кадре
+  for (let i = 1; i <= FLOOD_REPORTS.length; i++) {
+    s.floodCount = i
+    // Ритм «БАМ бам бам»: первые заполняют пустую ленту, дальше — залпом
+    // (260 мс быстрее штампа — карточки почти не разъезжаются)
+    await ctx.wait(i <= 4 ? 480 : 160)
+  }
+  // Штамп последней карточки и автоскролл доигрывают — лента замерла
+  await ctx.wait(150)
+  // Окно зарастает стеклом поверх того же кадра: под плитой лежит
+  // запечённый мок финала, так что смена живого DOM на картинку незаметна
+  s.glassPhase = 'on'
+  // Стекло целое, подсказка «Починить...» зовёт нажать:
+  // дальше его ломает только настоящий pointerdown пользователя
+  await ctx.wait(GLASS_REVEAL_MS + 2400)
+  // Финал отстоялся — тур завершён
+  await ctx.wait(600)
+}
+
 export const steps: TourStep[] = [
   {
     id: 'signup',
@@ -74,6 +136,10 @@ export const steps: TourStep[] = [
       s.auth = { tab: 'signup', name: '', email: '', password: '', otp: '' }
       // Прокрутка к настройкам не должна пережить шаг «Ссылка» — оболочка скрыта
       s.settingsScroll = 0
+      // Финал шага «Репорты» — стекло, завал и скрытая шапка — не должны пережить переход
+      s.chromeHidden = false
+      s.floodCount = 0
+      s.glassPhase = 'off'
       s.focused = ''
     },
     end() {
@@ -149,6 +215,10 @@ export const steps: TourStep[] = [
       s.created = false
       s.publicProjects = []
       s.settingsScroll = 0
+      // Финал шага «Репорты» не должен пережить переход
+      s.chromeHidden = false
+      s.floodCount = 0
+      s.glassPhase = 'off'
       s.focused = ''
     },
     end() {
@@ -274,6 +344,10 @@ export const steps: TourStep[] = [
       // Карточки видны на этой вкладке — статус шага «Баги» не должен просочиться
       s.bugPageStatus = 'in_progress'
       s.copied = false
+      // Финал шага «Репорты» не должен пережить переход
+      s.chromeHidden = false
+      s.floodCount = 0
+      s.glassPhase = 'off'
       s.focused = ''
       narrOff()
     },
@@ -339,6 +413,13 @@ export const steps: TourStep[] = [
       // Кольцо не должно доживать до следующего шага
       await ctx.hot(null)
       await ctx.wait(400)
+      // 7. Меню не мешает работе: ещё один клик — и оно свернулось в рейл;
+      //    со следующих шагов сайдбар живёт свёрнутым
+      narrOff()
+      await ctx.moveTo('[data-tour="sidebar-toggle"]')
+      await ctx.click('[data-tour="sidebar-toggle"]')
+      s.sidebarOpen = false
+      await ctx.wait(600)
     },
   },
   {
@@ -350,7 +431,8 @@ export const steps: TourStep[] = [
     setup() {
       s.screen = 'shell'
       s.activeTab = 'bugs'
-      s.sidebarOpen = true
+      // Сайдбар со всех следующих шагов — свёрнутый рейл
+      s.sidebarOpen = false
       s.sidebarDim = false
       s.navHotAll = false
       s.switcherProject = 'auth-service'
@@ -363,6 +445,10 @@ export const steps: TourStep[] = [
       s.bugScroll = 0
       s.bugComments = []
       s.settingsScroll = 0
+      // Финал шага «Репорты» не должен пережить переход
+      s.chromeHidden = false
+      s.floodCount = 0
+      s.glassPhase = 'off'
       s.focused = ''
       narrOff()
     },
@@ -456,7 +542,7 @@ export const steps: TourStep[] = [
     setup() {
       s.screen = 'shell'
       s.activeTab = 'settings'
-      s.sidebarOpen = true
+      s.sidebarOpen = false
       s.sidebarDim = false
       s.navHotAll = false
       s.switcherProject = 'auth-service'
@@ -465,6 +551,10 @@ export const steps: TourStep[] = [
       s.settingsSaved = false
       s.settingsScroll = 0
       s.copied = false
+      // Финал шага «Репорты» не должен пережить переход
+      s.chromeHidden = false
+      s.floodCount = 0
+      s.glassPhase = 'off'
       s.focused = ''
       narrOff()
     },
@@ -509,6 +599,10 @@ export const steps: TourStep[] = [
       s.reportStep = 'form'
       s.report = { title: '', body: '', email: '', otp: '' }
       s.settingsScroll = 0
+      // Финал шага «Репорты» не должен пережить переход
+      s.chromeHidden = false
+      s.floodCount = 0
+      s.glassPhase = 'off'
       s.focused = ''
     },
     end() {
@@ -571,14 +665,17 @@ export const steps: TourStep[] = [
     label: 'Репорты',
     title: 'Входящий репорт: ответ, страница и путь к багу',
     caption:
-      'Команда принимает репорт и отвечает репортёру, страница репорта привязывает его к найденному багу — а из валидного репорта можно сразу создать баг.',
+      'Команда принимает репорт и отвечает репортёру, страница репорта привязывает его к найденному багу',
     setup() {
       s.screen = 'shell'
       s.activeTab = 'reports'
-      s.sidebarOpen = true
+      // Сайдбар — свёрнутый рейл, как на всех шагах после «Интерфейса»
+      s.sidebarOpen = false
       s.sidebarDim = false
       s.navHotAll = false
       s.switcherProject = 'auth-service'
+      // Открытый переключатель не должен висеть в финальном кадре заставки
+      s.switcherOpen = false
       s.reportMenuOpen = false
       s.reportBugMenuOpen = false
       s.reportStatus = 'new'
@@ -586,6 +683,11 @@ export const steps: TourStep[] = [
       s.replyText = ''
       s.replySent = false
       s.linked = false
+      // Финал: шапка на месте, потока нет, стекла нет
+      s.chromeHidden = false
+      s.floodCount = 0
+      s.glassPhase = 'off'
+      s.glassBroken = false
       s.settingsScroll = 0
       s.focused = ''
       narrOff()
@@ -596,8 +698,20 @@ export const steps: TourStep[] = [
       s.replySent = true
       s.replyText = 'Спасибо! Проверим и починим в ближайшем релизе.'
       s.linked = true
+      // Reduced motion: финал готовым — завал из репортов под разбитым стеклом
+      s.chromeHidden = true
+      s.floodCount = FLOOD_REPORTS.length
+      s.glassPhase = 'on'
+      s.glassBroken = true
     },
-    async run(ctx) {
+    async run(ctx, opts) {
+      // Debug-кнопка «Финал» (рядом с чипом 07): шаг отматывается сразу
+      // к конечной заставке — демо-часть не играется, состояние берётся готовым
+      if (opts?.finale) {
+        primeReportsFinale()
+        await reportsFinale(ctx)
+        return
+      }
       await ctx.wait(700)
       // Статус — дропдаун в шапке карточки, как в реальном ReportCard
       await ctx.moveTo('[data-tour="report-status-trigger"]')
@@ -663,9 +777,9 @@ export const steps: TourStep[] = [
       await ctx.moveTo('[data-tour="report-bug-create"]')
       await ctx.wait(3000)
       narrOff()
-      // Курсор уходит в угол сцены — тур завершён
-      await ctx.moveTo('[data-tour="park"]', 1)
-      await ctx.wait(600)
+
+      // Конечная заставка — та же самая, что у debug-прыжка (см. reportsFinale)
+      await reportsFinale(ctx)
     },
   },
 ]

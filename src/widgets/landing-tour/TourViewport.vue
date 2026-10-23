@@ -3,6 +3,7 @@ import { VIEW_H, VIEW_W, tourState } from './tourState'
 import type { TourController } from './useTour'
 import TourCursorLayer from './TourCursorLayer.vue'
 import TourNarration from './parts/TourNarration.vue'
+import TourGlass from './parts/TourGlass.vue'
 import AuthScreen from './screens/AuthScreen.vue'
 import ProjectsScreen from './screens/ProjectsScreen.vue'
 import AppShellScreen from './screens/AppShellScreen.vue'
@@ -47,6 +48,9 @@ const props = defineProps<{
     <div class="tour-screen" :class="tourState.screen === 'report-page' && 'is-active'">
       <ReportDetailScreen />
     </div>
+
+    <!-- Стекло финала: поверх всех экранов, под пузырём и курсором -->
+    <TourGlass v-if="tourState.glassPhase === 'on'" />
 
     <TourNarration
       :viewport-ref="props.controller.viewportRef"

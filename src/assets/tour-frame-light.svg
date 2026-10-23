@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" fill="none">
+  <!--
+    Запечённый кадр финала шага «Репорты» (светлая тема) для тур-стекла.
+    Геометрия один в один повторяет tour-frame-dark.svg — меняются только
+    токены: bg/card белые, border #e4e4e7, текст #09090b, muted #71717a.
+    Токены сняты из main.css (--background / --card / --muted-foreground).
+  -->
+  <style>
+    text { font-family: Inter, 'Segoe UI', Roboto, sans-serif; }
+    .mono { font-family: 'JetBrains Mono', Consolas, monospace; }
+    .ico { fill: none; stroke: #71717a; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .hot { stroke: #09090b; }
+    .fg { fill: #09090b; }
+    .muted { fill: #71717a; }
+    /* Карточка: bg-card белая, держится на border #e4e4e7 */
+    .card { fill: #ffffff; stroke: #e4e4e7; }
+    /* Границы контейнера: border-border */
+    .line { stroke: #e4e4e7; }
+    /* Поля и кнопки с рамкой: bg-background + border-input */
+    .btn { fill: #ffffff; stroke: #e4e4e7; }
+    /* Текст/иконки поверх destructive — в обеих темах белые */
+    .inv { stroke: #ffffff; }
+    .inv-t { fill: #ffffff; }
+  </style>
+
+  <defs>
+    <!-- Иконки нарисованы в боксах 12–16px, ставятся через use x/y -->
+    <g id="chev" class="ico"><path d="M4 5.2 6 3.2l2 2"/><path d="M4 6.8 6 8.8l2-2"/></g>
+    <g id="copy" class="ico"><rect x="4.6" y="4.6" width="6.4" height="6.4" rx="1.5"/><path d="M3.2 8h-.7A1.5 1.5 0 0 1 1 6.5v-4A1.5 1.5 0 0 1 2.5 1h4A1.5 1.5 0 0 1 8 2.5V3"/></g>
+    <g id="reply" class="ico hot"><path d="M6 10 2.5 6.5 6 3"/><path d="M2.5 6.5h7.5A3.5 3.5 0 0 1 13.5 10v1.6"/></g>
+    <g id="bug14" class="ico"><ellipse cx="7" cy="8.4" rx="3.4" ry="4"/><path d="M7 4.4V3.2"/><path d="M3.6 6.6 2 5.4"/><path d="M10.4 6.6 12 5.4"/><path d="M3.6 10.2 2 11.4"/><path d="M10.4 10.2 12 11.4"/></g>
+    <g id="trash" class="ico inv"><path d="M2.5 4h9"/><path d="M5.5 4V2.9h3V4"/><path d="M3.9 4l.6 8.1h5L10.1 4"/><path d="M6.2 6.6v3.8"/><path d="M7.8 6.6v3.8"/></g>
+    <g id="flagoff" class="ico hot"><path d="M4 14.2V2.8"/><path d="M4 3.2h6.8L9.4 5.7l1.4 2.5H4"/><path d="m2.6 14.6 9-11.6"/></g>
+    <g id="panel" class="ico"><rect x="1" y="1" width="14" height="14" rx="3"/><path d="M6.2 1v14"/></g>
+    <g id="folder" class="ico"><path d="M1.5 13.2V3.8a1 1 0 0 1 1-1h3.1a1 1 0 0 1 .8.4l.9 1.2a1 1 0 0 0 .8.4h4.6a1 1 0 0 1 1 1v7.4a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1Z"/><path d="M5.6 9.4v1.4"/><path d="M8 9.4v2.2"/><path d="M10.4 9.4v.9"/></g>
+    <g id="bug16" class="ico"><ellipse cx="8" cy="9.4" rx="4" ry="4.4"/><path d="M8 5V3.6"/><path d="M4 7.6 2.2 6.2"/><path d="M12 7.6l1.8-1.4"/><path d="M4 11.2l-1.8 1.4"/><path d="M12 11.2l1.8 1.4"/></g>
+    <g id="alert" class="ico hot"><path d="M8 2.6 15 14H1z"/><path d="M8 6.8v3"/><path d="M8 12h.01"/></g>
+    <g id="users" class="ico"><circle cx="6.2" cy="6" r="2.6"/><path d="M1.8 13.6c0-2.6 2-4.2 4.4-4.2s4.4 1.6 4.4 4.2"/><circle cx="12.2" cy="6.6" r="2"/><path d="M11.8 9.8c1.9.3 3.4 1.6 3.4 3.6"/></g>
+    <g id="chart" class="ico"><path d="M2 14.2h12"/><path d="M4.5 14.2V9"/><path d="M8 14.2V3.6"/><path d="M11.5 14.2v-3.6"/></g>
+    <g id="gear" class="ico"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="1.1"/><path d="M8 1.6v1.6"/><path d="M8 12.8v1.6"/><path d="M1.6 8h1.6"/><path d="M12.8 8h1.6"/><path d="m3.4 3.4 1.2 1.2"/><path d="m11.4 11.4 1.2 1.2"/><path d="m12.6 3.4-1.2 1.2"/><path d="m4.6 11.4-1.2 1.2"/></g>
+  </defs>
+
+  <!-- Фон страницы: bg-background -->
+  <rect width="1280" height="720" fill="#ffffff"/>
+
+  <!-- Сайдбар-рейл w-16: border-r, шапка-тумблер, «Проекты», переключатель, разделы, низ -->
+  <line x1="64.5" y1="0" x2="64.5" y2="720" class="line"/>
+  <use href="#panel" x="24" y="26"/>
+  <use href="#folder" x="20" y="94"/>
+  <line x1="0" y1="136.5" x2="64" y2="136.5" class="line"/>
+  <circle cx="32" cy="170" r="10" fill="#e9e9ea"/>
+  <text x="32" y="173.5" text-anchor="middle" font-size="10" font-weight="500" fill="#18181b">A</text>
+  <use href="#bug16" x="20" y="202"/>
+  <!-- Активный раздел «Репорты»: bg-card (в светлой теме белый — видна только иконка) -->
+  <rect x="8" y="232" width="48" height="36" rx="8" fill="#ffffff"/>
+  <use href="#alert" x="20" y="242"/>
+  <use href="#users" x="20" y="282"/>
+  <use href="#chart" x="20" y="322"/>
+  <use href="#gear" x="20" y="362"/>
+  <line x1="0" y1="664.5" x2="64" y2="664.5" class="line"/>
+  <circle cx="32" cy="692" r="14" fill="#e9e9ea"/>
+  <text x="32" y="696.5" text-anchor="middle" font-size="12" font-weight="500" fill="#18181b">А</text>
+
+  <!-- Карточка #8: над верхней кромкой кадра, виден только футер действий -->
+  <g transform="translate(120,-140)">
+    <rect x="0.5" y="0.5" width="1103" height="199" rx="14" class="card"/>
+    <rect x="20" y="148" width="170" height="32" rx="8" class="btn"/>
+    <use href="#reply" x="32" y="157"/>
+    <text x="52" y="169" font-size="14" font-weight="500" class="fg">Ответить репортёру</text>
+    <use href="#bug14" x="198" y="157"/>
+    <text x="218" y="169" font-size="14" font-weight="500" class="muted">Баг</text>
+    <rect x="984" y="148" width="100" height="32" rx="8" fill="#dc2626"/>
+    <use href="#trash" x="996" y="157"/>
+    <text x="1016" y="169" font-size="14" font-weight="500" class="inv-t">Удалить</text>
+  </g>
+
+  <!-- Карточка #9 — Вадим С. -->
+  <g transform="translate(120,72)">
+    <rect x="0.5" y="0.5" width="1103" height="199" rx="14" class="card"/>
+    <circle cx="36" cy="36" r="16" fill="#e9e9ea"/>
+    <text x="36" y="40.5" text-anchor="middle" font-size="12" font-weight="500" fill="#18181b">ВС</text>
+    <text x="62" y="35" font-size="14" font-weight="500" class="fg">Вадим С.</text>
+    <text x="62" y="51" font-size="12" class="muted">18 окт 2026, 14:45</text>
+    <text x="62" y="69" font-size="12" class="mono muted">ID: 3c8e…91b2</text>
+    <use href="#copy" x="155" y="58"/>
+    <!-- Дропдаун статуса «Новый» и переключатель флага -->
+    <rect x="885" y="20" width="81" height="28" rx="8" class="btn"/>
+    <circle cx="897" cy="34" r="4" fill="#3b82f6"/>
+    <text x="911" y="38" font-size="12" font-weight="500" class="fg">Новый</text>
+    <use href="#chev" x="950" y="28" opacity="0.5"/>
+    <rect x="972" y="20" width="112" height="28" rx="8" class="btn"/>
+    <use href="#flagoff" x="980" y="27"/>
+    <text x="1000" y="38" font-size="12" font-weight="500" class="fg">Без флага</text>
+    <use href="#chev" x="1064" y="28" opacity="0.5"/>
+    <!-- Заголовок и тело репорта -->
+    <text x="20" y="103" font-size="16" font-weight="500" class="fg">Медленная загрузка списка проектов (&gt;3s)</text>
+    <text x="20" y="129" font-size="14" class="muted">При 50+ проектах первый рендер занимает больше трёх секунд, экран пустой.</text>
+    <!-- Футер: ответ, создание бага, удаление -->
+    <rect x="20" y="148" width="170" height="32" rx="8" class="btn"/>
+    <use href="#reply" x="32" y="157"/>
+    <text x="52" y="169" font-size="14" font-weight="500" class="fg">Ответить репортёру</text>
+    <use href="#bug14" x="198" y="157"/>
+    <text x="218" y="169" font-size="14" font-weight="500" class="muted">Баг</text>
+    <rect x="984" y="148" width="100" height="32" rx="8" fill="#dc2626"/>
+    <use href="#trash" x="996" y="157"/>
+    <text x="1016" y="169" font-size="14" font-weight="500" class="inv-t">Удалить</text>
+  </g>
+
+  <!-- Карточка #10 — Алиса Ж. -->
+  <g transform="translate(120,284)">
+    <rect x="0.5" y="0.5" width="1103" height="199" rx="14" class="card"/>
+    <circle cx="36" cy="36" r="16" fill="#e9e9ea"/>
+    <text x="36" y="40.5" text-anchor="middle" font-size="12" font-weight="500" fill="#18181b">АЖ</text>
+    <text x="62" y="35" font-size="14" font-weight="500" class="fg">Алиса Ж.</text>
+    <text x="62" y="51" font-size="12" class="muted">18 окт 2026, 14:47</text>
+    <text x="62" y="69" font-size="12" class="mono muted">ID: 9d41…7fa0</text>
+    <use href="#copy" x="155" y="58"/>
+    <rect x="885" y="20" width="81" height="28" rx="8" class="btn"/>
+    <circle cx="897" cy="34" r="4" fill="#3b82f6"/>
+    <text x="911" y="38" font-size="12" font-weight="500" class="fg">Новый</text>
+    <use href="#chev" x="950" y="28" opacity="0.5"/>
+    <rect x="972" y="20" width="112" height="28" rx="8" class="btn"/>
+    <use href="#flagoff" x="980" y="27"/>
+    <text x="1000" y="38" font-size="12" font-weight="500" class="fg">Без флага</text>
+    <use href="#chev" x="1064" y="28" opacity="0.5"/>
+    <text x="20" y="103" font-size="16" font-weight="500" class="fg">Страница 404 без кнопки «Назад»</text>
+    <text x="20" y="129" font-size="14" class="muted">Зайдя по битой ссылке, пользователь застревает: нет ни кнопки, ни хлебных крошек.</text>
+    <rect x="20" y="148" width="170" height="32" rx="8" class="btn"/>
+    <use href="#reply" x="32" y="157"/>
+    <text x="52" y="169" font-size="14" font-weight="500" class="fg">Ответить репортёру</text>
+    <use href="#bug14" x="198" y="157"/>
+    <text x="218" y="169" font-size="14" font-weight="500" class="muted">Баг</text>
+    <rect x="984" y="148" width="100" height="32" rx="8" fill="#dc2626"/>
+    <use href="#trash" x="996" y="157"/>
+    <text x="1016" y="169" font-size="14" font-weight="500" class="inv-t">Удалить</text>
+  </g>
+
+  <!-- Карточка #11 — Никита Д., хвост ленты -->
+  <g transform="translate(120,496)">
+    <rect x="0.5" y="0.5" width="1103" height="199" rx="14" class="card"/>
+    <circle cx="36" cy="36" r="16" fill="#e9e9ea"/>
+    <text x="36" y="40.5" text-anchor="middle" font-size="12" font-weight="500" fill="#18181b">НД</text>
+    <text x="62" y="35" font-size="14" font-weight="500" class="fg">Никита Д.</text>
+    <text x="62" y="51" font-size="12" class="muted">18 окт 2026, 14:48</text>
+    <text x="62" y="69" font-size="12" class="mono muted">ID: 6b2f…e35c</text>
+    <use href="#copy" x="155" y="58"/>
+    <rect x="885" y="20" width="81" height="28" rx="8" class="btn"/>
+    <circle cx="897" cy="34" r="4" fill="#3b82f6"/>
+    <text x="911" y="38" font-size="12" font-weight="500" class="fg">Новый</text>
+    <use href="#chev" x="950" y="28" opacity="0.5"/>
+    <rect x="972" y="20" width="112" height="28" rx="8" class="btn"/>
+    <use href="#flagoff" x="980" y="27"/>
+    <text x="1000" y="38" font-size="12" font-weight="500" class="fg">Без флага</text>
+    <use href="#chev" x="1064" y="28" opacity="0.5"/>
+    <text x="20" y="103" font-size="16" font-weight="500" class="fg">Таймаут при массовой загрузке файлов</text>
+    <text x="20" y="129" font-size="14" class="muted">Больше 20 файлов подряд обрываются на 30-й секунде без ошибки в логах.</text>
+    <rect x="20" y="148" width="170" height="32" rx="8" class="btn"/>
+    <use href="#reply" x="32" y="157"/>
+    <text x="52" y="169" font-size="14" font-weight="500" class="fg">Ответить репортёру</text>
+    <use href="#bug14" x="198" y="157"/>
+    <text x="218" y="169" font-size="14" font-weight="500" class="muted">Баг</text>
+    <rect x="984" y="148" width="100" height="32" rx="8" fill="#dc2626"/>
+    <use href="#trash" x="996" y="157"/>
+    <text x="1016" y="169" font-size="14" font-weight="500" class="inv-t">Удалить</text>
+  </g>
+</svg>
