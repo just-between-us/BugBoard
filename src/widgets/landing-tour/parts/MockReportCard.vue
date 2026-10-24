@@ -9,6 +9,7 @@ import MockField from './MockField.vue'
  * чип привязки и футер действий («Ответить», «Баг», «Удалить»).
  * Клик по карточке открывает страницу репорта — якорь report-card.
  * Данные репорта — пропсы: дефолты в точности повторяют демо-карточку шага.
+ * hideFooter убирает футер действий — компактная карточка для ленты на лендинге.
  */
 withDefaults(
   defineProps<{
@@ -26,6 +27,8 @@ withDefaults(
     authorName?: string
     authorInitials?: string
     reportDate?: string
+    /** Скрыть футер действий — для компактных лент (демо на лендинге). */
+    hideFooter?: boolean
   }>(),
   {
     status: 'new',
@@ -42,6 +45,7 @@ withDefaults(
     authorName: 'Дмитрий К.',
     authorInitials: 'ДК',
     reportDate: '18 окт 2025, 14:02',
+    hideFooter: false,
   },
 )
 
@@ -52,6 +56,13 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const STATUS_OPTIONS = ['new', 'confirmed', 'rejected'] as const
+
+/**
+ * Опциональный emit: клик по триггеру статуса. Тур его не слушает —
+ * карточка в его разметке остаётся статичной; слушают только внешние
+ * демки (лента репортов на лендинге), которым нужен циклический переключатель.
+ */
+const emit = defineEmits<{ statusClick: [] }>()
 </script>
 
 <template>
@@ -97,6 +108,7 @@ const STATUS_OPTIONS = ['new', 'confirmed', 'rejected'] as const
               type="button"
               data-tour="report-status-trigger"
               class="inline-flex h-7 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-xs font-medium shadow-xs transition-all hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+              @click.stop="emit('statusClick')"
             >
               <span class="h-2 w-2 shrink-0 rounded-full" :class="REPORT_STATUS_DOT[status]" />
               {{ STATUS_LABEL[status] }}
@@ -209,7 +221,7 @@ const STATUS_OPTIONS = ['new', 'confirmed', 'rejected'] as const
       </div>
 
       <!-- Футер действий: без внутренней рамки, прижат вправо «Удалить» -->
-      <div class="flex flex-wrap items-center justify-between gap-2">
+      <div v-if="!hideFooter" class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-2">
           <button
             v-if="!replyOpen && !replySent"

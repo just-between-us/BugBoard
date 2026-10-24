@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @import 'tailwindcss';
@@ -7,6 +8,7 @@
 
 @theme {
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-pixel: 'Pixelify Sans', ui-monospace, monospace;
   --color-severity-critical: #ff5a4e;
   --color-severity-major: #f2a93b;
   --color-severity-minor: #8a93a3;
