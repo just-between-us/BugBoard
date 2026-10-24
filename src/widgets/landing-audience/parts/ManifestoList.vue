@@ -84,15 +84,6 @@ const easeOut = [0.22, 1, 0.36, 1] as const
               aria-hidden="true"
             />
           </button>
-          <Motion
-            class="mt-1 block font-pixel text-[11px] text-muted-foreground/60"
-            :initial="{ opacity: 0 }"
-            :whileInView="{ opacity: 1 }"
-            :viewport="{ once: true, amount: 0.6 }"
-            :transition="{ duration: 0.4, delay: 0.3 + i * 0.18, ease: easeOut }"
-          >
-            {{ struck[i] ? 'клик — вернуть' : '✓ вернули' }}
-          </Motion>
         </li>
       </ul>
     </div>

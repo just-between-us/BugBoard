@@ -8,6 +8,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { REGEXP_ONLY_DIGITS } from 'vue-input-otp'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from '@/components/ui/input-otp'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -41,19 +48,22 @@ async function sendCode() {
   }
 }
 
-async function verifyCode() {
+async function verifyCode(completedCode?: string) {
   authError.value = ''
 
-  if (!otpCode.value.trim()) {
+  const code = (completedCode ?? otpCode.value).trim()
+
+  if (!code) {
     authError.value = 'Введите код из письма'
     return
   }
 
   authLoading.value = true
   try {
-    await auth.verifyEmailOtp(email.value.trim(), otpCode.value.trim())
+    await auth.verifyEmailOtp(email.value.trim(), code)
   } catch {
     authError.value = 'Неверный код или он истёк'
+    otpCode.value = ''
   } finally {
     authLoading.value = false
   }
@@ -110,19 +120,32 @@ function backToEmail() {
         </Button>
       </form>
 
-      <form v-else class="space-y-4" @submit.prevent="verifyCode">
+      <form v-else class="space-y-4" @submit.prevent="() => verifyCode()">
         <div class="space-y-1.5">
           <Label for="report-view-otp">Код из письма</Label>
-          <Input
+          <InputOTP
             id="report-view-otp"
             v-model="otpCode"
-            type="text"
-            inputmode="numeric"
-            placeholder="123456"
-            :disabled="authLoading"
+            :maxlength="6"
+            :pattern="REGEXP_ONLY_DIGITS"
             autocomplete="one-time-code"
+            inputmode="numeric"
+            :disabled="authLoading"
             autofocus
-          />
+            @complete="verifyCode"
+          >
+            <InputOTPGroup>
+              <InputOTPSlot :index="0" />
+              <InputOTPSlot :index="1" />
+              <InputOTPSlot :index="2" />
+            </InputOTPGroup>
+            <InputOTPSeparator />
+            <InputOTPGroup>
+              <InputOTPSlot :index="3" />
+              <InputOTPSlot :index="4" />
+              <InputOTPSlot :index="5" />
+            </InputOTPGroup>
+          </InputOTP>
         </div>
 
         <p class="text-sm text-muted-foreground">

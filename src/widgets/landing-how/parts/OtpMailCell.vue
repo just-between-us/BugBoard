@@ -16,8 +16,7 @@ let timer: ReturnType<typeof setTimeout> | undefined
 let step = 0
 
 const reduceMotion =
-  typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 if (reduceMotion) {
   lit.value = CODE.length - 1
@@ -49,7 +48,7 @@ if (!reduceMotion) {
 <template>
   <button
     type="button"
-    class="group flex w-full cursor-default flex-col items-center justify-center gap-4 rounded-lg border border-border/70 bg-background/60 px-4 py-6 select-none"
+    class="group flex w-full h-full cursor-default flex-col items-center justify-center gap-3 rounded-lg border border-border/70 bg-background/60 px-4 py-5 select-none"
     :aria-label="reduceMotion ? undefined : 'Показать письмо ещё раз'"
     @click="replay"
   >
@@ -58,12 +57,6 @@ if (!reduceMotion) {
       class="relative flex h-10 w-14 items-center justify-center rounded-md border border-border bg-card shadow-xs transition-transform duration-300 ease-out group-hover:-translate-y-0.5"
     >
       <Mail class="h-5 w-5 text-muted-foreground" />
-      <span
-        class="absolute -top-1 -right-1 font-pixel text-[10px] leading-none text-foreground"
-        aria-hidden="true"
-      >
-        ✉
-      </span>
     </span>
 
     <!-- Код из письма -->

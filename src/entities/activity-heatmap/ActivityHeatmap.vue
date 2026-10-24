@@ -16,9 +16,34 @@ const viewportWeeks = ref(resolveWeeks())
 
 function syncViewport() {
   viewportWeeks.value = resolveWeeks()
+  measure()
 }
 
-const weeks = computed(() => props.weeks ?? viewportWeeks.value)
+/**
+ * Сколько недель реально влезает в контейнер без горизонтального скролла:
+ * ширина минус колонка дней недели (w-6) и зазор до неё, делённое на шаг
+ * колонки (ячейка 14px + gap). Замеряется сам контейнер — бенто-ячейка
+ * и карточка профиля дают разную ширину при одинаковой ширине окна.
+ */
+const rootRef = ref<HTMLElement | null>(null)
+const fitWeeks = ref(12)
+
+function measure() {
+  const el = rootRef.value
+  if (!el) return
+  const width = el.clientWidth
+  if (width <= 0) return
+  const w = window.innerWidth
+  const cellGap = w >= 768 ? 6 : w >= 640 ? 4 : 3
+  const labelsWidth = 24 // w-6 колонка «Пн…Вс»
+  const outerGap = 6 // gap-1.5 между колонкой и сеткой
+  const available = width - labelsWidth - outerGap
+  fitWeeks.value = Math.max(6, Math.floor((available + cellGap) / (14 + cellGap)))
+}
+
+const weeks = computed(() =>
+  Math.max(6, Math.min(props.weeks ?? viewportWeeks.value, fitWeeks.value)),
+)
 
 const days = computed(() => {
   const mondayIndex = (new Date().getDay() + 6) % 7
@@ -70,6 +95,7 @@ function tooltip(day: DayBucket): string {
 
 onMounted(() => {
   window.addEventListener('resize', syncViewport)
+  measure()
 })
 
 onBeforeUnmount(() => {
@@ -78,8 +104,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex w-full justify-center">
-    <div class="flex w-fit max-w-full gap-1.5 overflow-x-auto pb-1">
+  <div ref="rootRef" class="flex w-full justify-center">
+    <!-- Без overflow-x-auto: число недель подгоняется measure() под ширину -->
+    <div class="flex w-fit max-w-full gap-1.5">
       <div class="flex shrink-0 flex-col gap-0.75 sm:gap-1 md:gap-1.5">
         <div class="h-3.5 w-6" />
         <div

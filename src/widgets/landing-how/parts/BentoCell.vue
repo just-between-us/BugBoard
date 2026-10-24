@@ -30,7 +30,7 @@ const hovered = ref(false)
 
 <template>
   <Motion
-    class="relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card p-5 shadow-xs sm:p-6"
+    class="relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card p-4 shadow-xs sm:p-5"
     :initial="{ opacity: 0, y: 24 }"
     :whileInView="{ opacity: 1, y: 0 }"
     :viewport="{ once: true, amount: 0.35 }"
@@ -50,7 +50,7 @@ const hovered = ref(false)
     <!-- Вертикальный лейбл у крупных ячеек -->
     <span
       v-if="sideLabel"
-      class="pointer-events-none absolute top-1/2 right-2 hidden -translate-y-1/2 rotate-90 font-pixel text-xs tracking-widest text-muted-foreground/40 select-none xl:block"
+      class="pointer-events-none absolute top-1/2 right-[] hidden -translate-y-1/2 rotate-90 font-pixel text-xs tracking-widest text-muted-foreground/40 select-none xl:block"
       aria-hidden="true"
     >
       {{ sideLabel }}
@@ -65,8 +65,9 @@ const hovered = ref(false)
       {{ description }}
     </p>
 
-    <!-- Живое демо ячейки -->
-    <div class="relative mt-5 flex-1">
+    <!-- Живое демо ячейки: при растяжении ячейки в ряду контент центрируется,
+         а не копит пустоту внизу -->
+    <div class="relative mt-4 flex flex-1 flex-col justify-center">
       <slot />
     </div>
   </Motion>

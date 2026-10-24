@@ -3,7 +3,6 @@ import { Motion } from 'motion-v'
 import { AsciiBackground } from '@/components/ascii-background'
 import ManifestoList from './parts/ManifestoList.vue'
 import AudienceCards from './parts/AudienceCards.vue'
-import PixelMarquee from './parts/PixelMarquee.vue'
 
 /**
  * Философский блок вместо прежней секции аудиторий: манифест «Не линейка
@@ -23,9 +22,6 @@ const easeOut = [0.22, 1, 0.36, 1] as const
       :radius="5"
     />
 
-    <!-- Пиксельная бегущая строка-разделитель -->
-    <PixelMarquee class="relative" />
-
     <div class="relative mx-auto max-w-6xl px-6 py-20 lg:py-28">
       <!-- Лид манифеста -->
       <Motion
@@ -36,14 +32,12 @@ const easeOut = [0.22, 1, 0.36, 1] as const
         :transition="{ duration: 0.6, ease: easeOut }"
       >
         <p class="font-pixel text-sm tracking-widest text-muted-foreground">PHILOSOPHY</p>
-        <h2 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-          Не линейка с лазерным уровнем
-        </h2>
+        <h2 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Проще</h2>
         <p class="mt-4 max-w-2xl text-balance text-sm text-muted-foreground sm:text-base">
           BugBoard — удобный инструмент с открытым кодом для усреднённой категории проектов:
-          side-project, учебная команда, небольшой продукт. Ему не нужен стабилизатор и
-          сертификация — нужна понятность. Простой подход — это не «пока не доделали»,
-          а позиция: чем меньше интерфейс мешает, тем быстрее баг доходит до исправления.
+          side-project, учебная команда, небольшой продукт. Ему не нужен стабилизатор и сертификация
+          — нужна понятность. Простой подход — чем меньше интерфейс мешает, тем быстрее баг доходит
+          до исправления.
         </p>
       </Motion>
 

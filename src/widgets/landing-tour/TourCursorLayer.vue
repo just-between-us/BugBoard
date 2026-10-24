@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Motion, type MotionValue } from 'motion-v'
-import TourCursor from '@/components/TourCursor.vue'
+import TourCursor from './parts/TourCursor.vue'
 
 /** Слой курсора внутри вьюпорта: позиция — motion-value, клик — сжатие + ripple + ASCII-вспышка. */
 defineProps<{

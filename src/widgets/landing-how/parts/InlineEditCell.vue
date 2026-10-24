@@ -49,7 +49,7 @@ function cancel() {
 </script>
 
 <template>
-  <div class="rounded-lg border border-border/70 bg-background/60 p-4">
+  <div class="rounded-lg border border-border/70 bg-background/60 p-3">
     <!-- Статус автосохранения — единственный цвет здесь: изумруд успеха -->
     <div class="mb-2 h-5">
       <span

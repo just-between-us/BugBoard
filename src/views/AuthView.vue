@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { REGEXP_ONLY_DIGITS } from 'vue-input-otp'
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp'
 
 const router = useRouter()
 const route = useRoute()
@@ -86,14 +88,16 @@ async function handleSignUp() {
   }
 }
 
-async function handleVerify() {
+async function handleVerify(completedCode?: string) {
   error.value = ''
   loading.value = true
+  if (completedCode) otpCode.value = completedCode
   try {
-    await auth.verifySignup(email.value, otpCode.value)
+    await auth.verifySignup(email.value, completedCode || otpCode.value)
     router.push(redirectTo.value)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Неверный код'
+    otpCode.value = ''
   } finally {
     loading.value = false
   }
@@ -222,20 +226,34 @@ async function resendCode() {
           </Button>
         </form>
 
-        <form v-else class="space-y-4" @submit.prevent="handleVerify">
-          <div class="space-y-1.5">
+        <form v-else class="space-y-4" @submit.prevent="() => handleVerify()">
+          <div class="space-y-1.5 flex flex-col justify-center items-center">
             <Label for="otp">Код из письма</Label>
-            <Input
+            <InputOTP
               id="otp"
               v-model="otpCode"
-              type="text"
-              inputmode="numeric"
-              required
+              :maxlength="6"
+              :pattern="REGEXP_ONLY_DIGITS"
               autocomplete="one-time-code"
-            />
+              inputmode="numeric"
+              :disabled="loading"
+              @complete="handleVerify"
+            >
+              <InputOTPGroup>
+                <InputOTPSlot :index="0" />
+                <InputOTPSlot :index="1" />
+                <InputOTPSlot :index="2" />
+              </InputOTPGroup>
+              <InputOTPSeparator />
+              <InputOTPGroup>
+                <InputOTPSlot :index="3" />
+                <InputOTPSlot :index="4" />
+                <InputOTPSlot :index="5" />
+              </InputOTPGroup>
+            </InputOTP>
           </div>
-          <p class="text-sm text-muted-foreground">
-            Введите код из письма или перейдите по ссылке в нём
+          <p class="text-sm text-muted-foreground text-center">
+            Введите код из письма или перейдите по ссылке
           </p>
           <p v-if="error" class="text-sm text-severity-critical">{{ error }}</p>
           <Button type="submit" class="w-full" :disabled="loading">
@@ -243,7 +261,7 @@ async function resendCode() {
           </Button>
           <button
             type="button"
-            class="text-sm text-muted-foreground underline underline-offset-4"
+            class="text-sm w-full text-muted-foreground underline underline-offset-4 cursor-pointer"
             @click="resendCode"
           >
             Отправить код ещё раз

@@ -16,9 +16,7 @@ const copied = ref<number | null>(null)
 let copiedTimer: ReturnType<typeof setTimeout> | undefined
 
 async function copyStep(step: number) {
-  const value = getComputedStyle(document.documentElement)
-    .getPropertyValue(`--mono-${step}`)
-    .trim()
+  const value = getComputedStyle(document.documentElement).getPropertyValue(`--mono-${step}`).trim()
   try {
     await navigator.clipboard.writeText(value)
   } catch {
@@ -66,7 +64,7 @@ const heatGlow = ref(false)
           :key="step"
           type="button"
           :aria-label="`Скопировать --mono-${step}`"
-          class="group relative h-9 flex-1 cursor-pointer rounded-md border transition-transform duration-200 ease-out hover:-translate-y-0.5"
+          class="group relative h-9 flex-1 cursor-pointer rounded-md border transition-all duration-300 ease-out hover:-translate-y-0.5 active:scale-95 active:duration-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           :class="
             copied === step
               ? 'ring-2 ring-emerald-500/60 ring-offset-2 ring-offset-card'
@@ -76,22 +74,26 @@ const heatGlow = ref(false)
           @click="copyStep(step)"
         >
           <span
-            v-if="copied === step"
-            class="absolute inset-0 flex items-center justify-center"
+            class="pointer-events-none absolute inset-0 flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none"
+            :class="copied === step ? 'scale-100 opacity-100' : 'scale-50 opacity-0'"
+            aria-hidden="true"
           >
             <Check class="h-3.5 w-3.5 text-emerald-500 drop-shadow-[0_0_2px_rgb(0_0_0_0.8)]" />
           </span>
+
           <span
-            v-else
-            class="absolute inset-x-0 -bottom-5 text-center font-pixel text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+            class="pointer-events-none absolute inset-x-0 -bottom-5 text-center font-pixel text-[10px] text-muted-foreground transition-all duration-300 ease-out motion-reduce:transition-none"
+            :class="
+              copied === step
+                ? 'translate-y-1 opacity-0'
+                : 'translate-y-0 opacity-0 group-hover:opacity-100'
+            "
+            aria-hidden="true"
           >
             {{ `mono-${step}` }}
           </span>
         </button>
       </div>
-      <p class="font-pixel text-[11px] text-muted-foreground">
-        {{ copied ? 'скопировано ✓' : 'клик — скопировать токен' }}
-      </p>
     </div>
 
     <!-- Хитмап активности — тот же, что в профиле; под курсором — прожектор -->
@@ -112,8 +114,7 @@ const heatGlow = ref(false)
     </div>
 
     <p class="text-xs text-muted-foreground">
-      Статистика, хитмап и прогресс-бары — на шкале серого. Цветные только статусы,
-      важность и «Скопировано».
+      Статистика, хитмап и прогресс-бары — на шкале серого, а вот цветные только статусы.
     </p>
   </div>
 </template>

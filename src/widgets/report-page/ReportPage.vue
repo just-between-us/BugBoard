@@ -11,6 +11,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar } from '@/components/avatar'
+import { REGEXP_ONLY_DIGITS } from 'vue-input-otp'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from '@/components/ui/input-otp'
 
 const route = useRoute()
 const router = useRouter()
@@ -90,10 +97,12 @@ async function handleSubmit() {
   }
 }
 
-async function handleVerify() {
+async function handleVerify(completedCode?: string) {
   error.value = ''
 
-  if (!otpCode.value.trim()) {
+  const code = (completedCode ?? otpCode.value).trim()
+
+  if (!code) {
     error.value = 'Введите код из письма'
     return
   }
@@ -101,9 +110,10 @@ async function handleVerify() {
   loading.value = true
 
   try {
-    await auth.verifyEmailOtp(email.value.trim(), otpCode.value.trim())
+    await auth.verifyEmailOtp(email.value.trim(), code)
   } catch {
     error.value = 'Неверный код или он истёк'
+    otpCode.value = ''
     loading.value = false
     return
   }
@@ -335,23 +345,36 @@ onMounted(loadProject)
             </Button>
           </form>
 
-          <form v-else class="space-y-4" @submit.prevent="handleVerify">
+          <form v-else class="space-y-4" @submit.prevent="() => handleVerify()">
             <div class="space-y-1.5">
               <Label for="report-otp">Код из письма</Label>
               <p class="text-sm text-muted-foreground">
                 Мы отправили код на {{ email }}. Вставьте его, чтобы отправить репорт — черновик
                 сохранён.
               </p>
-              <Input
+              <InputOTP
                 id="report-otp"
                 v-model="otpCode"
-                type="text"
-                inputmode="numeric"
-                placeholder="123456"
-                :disabled="loading"
+                :maxlength="6"
+                :pattern="REGEXP_ONLY_DIGITS"
                 autocomplete="one-time-code"
+                inputmode="numeric"
+                :disabled="loading"
                 autofocus
-              />
+                @complete="handleVerify"
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot :index="0" />
+                  <InputOTPSlot :index="1" />
+                  <InputOTPSlot :index="2" />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  <InputOTPSlot :index="3" />
+                  <InputOTPSlot :index="4" />
+                  <InputOTPSlot :index="5" />
+                </InputOTPGroup>
+              </InputOTP>
             </div>
 
             <div class="rounded-md border border-border bg-muted/40 p-3">

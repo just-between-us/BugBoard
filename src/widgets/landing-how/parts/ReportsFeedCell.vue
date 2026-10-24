@@ -1,35 +1,46 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { Motion } from 'motion-v'
 import MockReportCard from '@/widgets/landing-tour/parts/MockReportCard.vue'
-import type { REPORT_STATUS_VALUES } from '@/entities/report/meta'
+import { formatDate } from '@/lib/format'
 
 /**
  * Ячейка «Репорты складываются в работу»: карточки реального анатомии
  * ReportCard прилетают штампом по въезду во вьюпорт (как в финале тура),
- * а клик по статусу перещёлкивает new → confirmed → rejected циклом —
- * тот же дропдаун, только живой.
+ * а дропдауны в них настоящие — статус и флаг выбираются прямо в ленте.
  */
 
-type Status = (typeof REPORT_STATUS_VALUES)[number]
-
-const CYCLE: Record<Status, Status> = { new: 'confirmed', confirmed: 'rejected', rejected: 'new' }
-
-const reports = ref([
-  { id: 1, status: 'new' as Status },
-  { id: 2, status: 'confirmed' as Status },
-  { id: 3, status: 'rejected' as Status },
-])
-
-function cycle(report: { status: Status }) {
-  report.status = CYCLE[report.status]
-}
+const reports = [
+  {
+    id: '8c4d1f62-3a7b-4e09-b5d8-2f6a91c7e034',
+    status: 'new' as const,
+    title: 'Кнопка входа',
+    name: 'Дмитрий К.',
+    initials: 'ДК',
+    date: formatDate('2026-09-30T15:48:00'),
+  },
+  {
+    id: 'b2e90a47-6c1d-4f83-9a52-7d3b8e1f6c05',
+    status: 'confirmed' as const,
+    title: 'Шапка на iPhone',
+    name: 'Марина А.',
+    initials: 'МА',
+    date: formatDate('2026-09-29T11:07:00'),
+  },
+  {
+    id: '5f17c3d8-9e2a-4b60-8c41-a0d6b92e7f13',
+    status: 'rejected' as const,
+    title: 'Таймаут загрузки',
+    name: 'Олег В.',
+    initials: 'ОВ',
+    date: formatDate('2026-09-27T19:22:00'),
+  },
+]
 
 const easeOut = [0.22, 1, 0.36, 1] as const
 </script>
 
 <template>
-  <div class="space-y-2.5">
+  <div class="space-y-2">
     <!-- Штамп: быстрый слёт сверху с лёгким перелётом — тот же вайб, что в туре -->
     <Motion
       v-for="(report, i) in reports"
@@ -41,23 +52,21 @@ const easeOut = [0.22, 1, 0.36, 1] as const
       :transition="{ duration: 0.45, delay: 0.15 + i * 0.18, ease: easeOut }"
     >
       <MockReportCard
+        interactive
         hide-footer
+        stack-controls
         :status="report.status"
-        :report-title="['Кнопка входа', 'Шапка на iPhone', 'Таймаут загрузки'][i]"
-        :report-body="[
-          'После клика «Войти через GitHub» окно закрывается.',
-          'Навигация наезжает на логотип при ширине до 380px.',
-          'Больше 20 файлов обрываются на 30-й секунде.',
-        ][i]"
-        :author-name="['Дмитрий К.', 'Марина А.', 'Олег В.'][i]"
-        :author-initials="['ДК', 'МА', 'ОВ'][i]"
-        :report-date="['2 мин назад', '18 мин назад', 'вчера'][i]"
-        @status-click="cycle(report)"
+        :report-id="report.id"
+        :report-title="report.title"
+        :report-body="''"
+        :author-name="report.name"
+        :author-initials="report.initials"
+        :report-date="report.date"
       />
     </Motion>
 
     <p class="font-pixel text-[11px] text-muted-foreground">
-      кликните по статусу — команда разбирает поток, не выходя из списка
+      откройте меню и смените статус не выходя из списка
     </p>
   </div>
 </template>

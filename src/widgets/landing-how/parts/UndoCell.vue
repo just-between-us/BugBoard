@@ -60,7 +60,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="relative overflow-hidden rounded-lg border border-border/70 bg-background/60 p-4 transition-opacity duration-500"
+    class="relative overflow-hidden rounded-lg border border-border/70 bg-background/60 p-3 transition-opacity duration-500"
     :class="phase === 'deleted' ? 'opacity-60' : 'opacity-100'"
   >
     <!-- Карточка проекта -->

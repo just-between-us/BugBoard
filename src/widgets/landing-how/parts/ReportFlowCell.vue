@@ -30,8 +30,7 @@ let timers: ReturnType<typeof setTimeout>[] = []
 let started = false
 
 const reduceMotion =
-  typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 function schedule(fn: () => void, ms: number) {
   timers.push(setTimeout(fn, ms))
@@ -73,15 +72,8 @@ function startFill() {
   })
 }
 
-function focusOtp() {
-  otpInput.value?.focus()
-}
-
-function onOtpInput(event: Event) {
-  const el = event.target as HTMLInputElement
-  code.value = el.value.replace(/\D/g, '').slice(0, 6)
-  el.value = code.value
-}
+import { REGEXP_ONLY_DIGITS } from 'vue-input-otp'
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp'
 
 /** Сброс демо: очистить код и показать отправку заново */
 function reset() {
@@ -122,9 +114,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="demoRoot" class="relative">
-    <!-- Форма репортёра -->
+    <!-- Форма репортёра: без внутренней рамки — контур даёт сама ячейка бенто -->
     <div
-      class="space-y-3 rounded-lg border border-border/70 bg-background/60 p-4 transition-opacity duration-500"
+      class="space-y-2 rounded-lg bg-background/60 p-3 transition-opacity duration-500"
       :class="sent ? 'pointer-events-none opacity-0' : 'opacity-100'"
     >
       <label class="block space-y-1.5">
@@ -143,60 +135,54 @@ onBeforeUnmount(() => {
       <label class="block space-y-1.5">
         <span class="text-xs font-medium">Описание</span>
         <span
-          class="flex min-h-[64px] items-start rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs dark:bg-input/30"
+          class="flex min-h-10 items-start rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-xs dark:bg-input/30"
         >
           <span class="wrap-break-word whitespace-pre-line">{{ description }}</span>
         </span>
       </label>
 
-      <label class="block space-y-1.5">
-        <span class="text-xs font-medium">Почта — на неё придёт код</span>
-        <span
-          class="flex h-9 items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs dark:bg-input/30"
-        >
-          <Mail class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          <span class="truncate" :class="email ? '' : 'text-muted-foreground'">
-            {{ email || 'you@example.com' }}
-          </span>
-        </span>
-      </label>
-
-      <!-- OTP: шесть ячеек + реальный input-перехватчик -->
-      <div class="space-y-1.5">
-        <span class="text-xs font-medium">Код из письма</span>
-        <div class="relative cursor-text" @click="focusOtp">
-          <div class="flex gap-1.5">
-            <span
-              v-for="i in 6"
-              :key="i"
-              :data-slot="`otp-${i}`"
-              class="flex h-10 w-9 items-center justify-center rounded-md border font-mono text-base shadow-xs transition-colors duration-150"
-              :class="
-                code[i - 1]
-                  ? 'border-input bg-background'
-                  : code.length === i - 1 && filled
-                    ? 'border-foreground/40 bg-background'
-                    : 'border-input bg-transparent dark:bg-input/30'
-              "
-            >
-              {{ code[i - 1] ?? '' }}
+      <!-- Почта и OTP в один ряд: форма не тянется вниз -->
+      <div class="flex flex-wrap items-start gap-x-4 gap-y-2">
+        <label class="block min-w-44 flex-1 space-y-1.5">
+          <span class="text-xs font-medium">Почта — на неё придёт код</span>
+          <span
+            class="flex h-9 items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs dark:bg-input/30"
+          >
+            <Mail class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span class="truncate" :class="email ? '' : 'text-muted-foreground'">
+              {{ email || 'you@example.com' }}
             </span>
-          </div>
-          <input
-            ref="otpInput"
-            :value="code"
-            inputmode="numeric"
+          </span>
+        </label>
+
+        <!-- OTP: шесть ячеек + реальный input-перехватчик -->
+        <div class="space-y-1.5">
+          <span class="text-xs font-medium">Код из письма</span>
+          <InputOTP
+            id="otp"
+            v-model="code"
+            :maxlength="6"
+            :pattern="REGEXP_ONLY_DIGITS"
             autocomplete="one-time-code"
-            maxlength="6"
-            aria-label="Код из письма"
-            class="absolute inset-0 h-full w-full cursor-text bg-transparent text-center font-mono text-base text-transparent caret-transparent outline-none"
-            @input="onOtpInput"
-          />
+            inputmode="numeric"
+          >
+            <InputOTPGroup>
+              <InputOTPSlot :index="0" />
+              <InputOTPSlot :index="1" />
+              <InputOTPSlot :index="2" />
+            </InputOTPGroup>
+            <InputOTPSeparator />
+            <InputOTPGroup>
+              <InputOTPSlot :index="3" />
+              <InputOTPSlot :index="4" />
+              <InputOTPSlot :index="5" />
+            </InputOTPGroup>
+          </InputOTP>
+          <p class="font-pixel text-[11px] text-muted-foreground">
+            <template v-if="!filled">заполняем…</template>
+            <template v-else>шесть цифр — и репорт ушёл</template>
+          </p>
         </div>
-        <p class="font-pixel text-[11px] text-muted-foreground">
-          <template v-if="!filled">заполняем…</template>
-          <template v-else>кликните и введите свой код — шесть цифр отправляют репорт</template>
-        </p>
       </div>
     </div>
 
@@ -206,9 +192,7 @@ onBeforeUnmount(() => {
         v-if="sent"
         class="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg border border-border/70 bg-background/95 p-6 text-center"
       >
-        <span
-          class="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500/15"
-        >
+        <span class="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500/15">
           <Check class="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
         </span>
         <p class="font-mono text-sm font-medium">Репорт отправлен</p>

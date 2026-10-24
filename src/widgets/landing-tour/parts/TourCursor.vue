@@ -1,4 +1,4 @@
-<!-- components/TourCursor.vue -->
+<!-- landing-tour/parts/TourCursor.vue -->
 <script setup lang="ts">
 withDefaults(
   defineProps<{
