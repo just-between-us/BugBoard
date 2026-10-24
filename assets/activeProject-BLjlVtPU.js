@@ -1,0 +1,1 @@
+import{vn as e}from"./runtime-core.esm-bundler-B8D2lM98.js";import{n as t}from"./pinia-q7IaOcue.js";var n=`bugboard-active-project`;function r(){return localStorage.getItem(n)}var i=t(`activeProject`,()=>{let t=e(r());function i(e){t.value=e,e?localStorage.setItem(n,e):localStorage.removeItem(n)}return{activeProjectId:t,setActiveProject:i}});export{i as t};
