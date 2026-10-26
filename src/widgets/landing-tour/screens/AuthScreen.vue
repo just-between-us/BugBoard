@@ -4,6 +4,7 @@ import { useMediaQuery } from '@vueuse/core'
 import { nextTick, ref, watch } from 'vue'
 import { VIEW_H, tourState } from '../tourState'
 import MockField from '../parts/MockField.vue'
+import MockOtpField from '../parts/MockOtpField.vue'
 
 /**
  * Шаг 1: карточка аутентификации — регистрация с OTP-подтверждением.
@@ -152,12 +153,10 @@ watch(
 
             <!-- OTP -->
             <div v-else class="mt-4 space-y-3">
-              <MockField
+              <MockOtpField
                 target="auth-otp"
-                label="Код из письма"
                 :value="state.auth.otp"
                 :focused="state.focused === 'auth-otp'"
-                placeholder="123456"
               />
               <p class="text-xs text-muted-foreground">
                 Введите код из письма или перейдите по ссылке в нём

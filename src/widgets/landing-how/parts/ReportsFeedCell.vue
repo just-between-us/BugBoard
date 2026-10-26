@@ -65,7 +65,7 @@ const easeOut = [0.22, 1, 0.36, 1] as const
       />
     </Motion>
 
-    <p class="font-pixel text-[11px] text-muted-foreground">
+    <p class="font-mono text-[11px] text-muted-foreground">
       откройте меню и смените статус не выходя из списка
     </p>
   </div>

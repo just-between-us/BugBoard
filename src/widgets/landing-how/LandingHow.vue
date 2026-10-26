@@ -78,8 +78,8 @@ import SelfHostCell from './parts/SelfHostCell.vue'
         <BentoCell
           class="lg:col-span-2 lg:col-start-2 lg:row-span-2 lg:row-start-3"
           num="04"
-          title="Опасное — с откатом"
-          description="Удаление — отсчёт с полосой и «Восстановить». Мягкое удаление вместо страшного «вы уверены?»."
+          title="Опасное — с откатом и подтверждением"
+          description="Удаление идёт отсчётом с «Восстановить», выход — кольцом на кнопке. Подтверждения — спокойные и понятные, без навязчивых модалок."
           :delay="0.08"
         >
           <UndoCell />
@@ -113,7 +113,6 @@ import SelfHostCell from './parts/SelfHostCell.vue'
           num="07"
           title="Свой хостинг, открытый код"
           description="Supabase вместо своего бэкенда: две переменные окружения — и проект живёт у вас. Права решает база (RLS), а не интерфейс: чужой проект не отдаст даже ID."
-          side-label="OPEN SOURCE"
           :delay="0.08"
         >
           <SelfHostCell class="mb-4" />

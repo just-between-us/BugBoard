@@ -66,6 +66,9 @@ function cancel() {
         <Check class="h-3 w-3" />
         Сохранено
       </span>
+      <span v-else class="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        Попробуйте исправить текст
+      </span>
     </div>
 
     <!-- Заголовок: текст ↔ инпут -->
@@ -95,7 +98,7 @@ function cancel() {
       </template>
     </div>
 
-    <p class="mt-3 font-pixel text-[11px] text-muted-foreground">
+    <p class="mt-3 font-mono text-[11px] text-muted-foreground">
       кликните по заголовку — как в приложении
     </p>
   </div>

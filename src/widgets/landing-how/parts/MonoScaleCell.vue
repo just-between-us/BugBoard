@@ -67,7 +67,7 @@ const heatGlow = ref(false)
           class="group relative h-9 flex-1 cursor-pointer rounded-md border transition-all duration-300 ease-out hover:-translate-y-0.5 active:scale-95 active:duration-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           :class="
             copied === step
-              ? 'ring-2 ring-emerald-500/60 ring-offset-2 ring-offset-card'
+              ? 'ring-2 ring-emerald-500 dark:ring-emerald-400 ring-offset-2 ring-offset-card'
               : 'border-border'
           "
           :style="{ background: `var(--mono-${step})` }"
@@ -78,7 +78,7 @@ const heatGlow = ref(false)
             :class="copied === step ? 'scale-100 opacity-100' : 'scale-50 opacity-0'"
             aria-hidden="true"
           >
-            <Check class="h-3.5 w-3.5 text-emerald-500 drop-shadow-[0_0_2px_rgb(0_0_0_0.8)]" />
+            <Check class="h-3.5 w-3.5 text-emerald-500" />
           </span>
 
           <span

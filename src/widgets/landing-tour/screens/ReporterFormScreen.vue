@@ -2,6 +2,7 @@
 import { ArrowLeft, ArrowUpRight, CircleCheck, Mail, Send } from '@lucide/vue'
 import { tourState } from '../tourState'
 import MockField from '../parts/MockField.vue'
+import MockOtpField from '../parts/MockOtpField.vue'
 
 /** Шаг 6: публичная форма репорта — заголовок, описание, почта, OTP, успех. */
 const state = tourState
@@ -74,12 +75,10 @@ const state = tourState
 
         <!-- OTP поверх формы -->
         <div v-else-if="state.reportStep === 'otp'" class="mt-5 space-y-3">
-          <MockField
+          <MockOtpField
             target="report-otp"
-            label="Код из письма"
             :value="state.report.otp"
             :focused="state.focused === 'report-otp'"
-            placeholder="123456"
           />
           <p class="text-[11px] text-muted-foreground">
             Мы отправили код на {{ state.report.email }}. Вставьте его, чтобы отправить репорт —

@@ -105,7 +105,7 @@ onBeforeUnmount(() => {
 
       <p
         v-if="!typing && shown === LINES.length"
-        class="mt-2 font-pixel text-[11px] opacity-50"
+        class="mt-2 font-mono text-[11px] opacity-50"
       >
         клик — перезапечатать
       </p>

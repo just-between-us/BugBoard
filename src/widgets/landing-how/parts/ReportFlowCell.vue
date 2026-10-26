@@ -178,7 +178,7 @@ onBeforeUnmount(() => {
               <InputOTPSlot :index="5" />
             </InputOTPGroup>
           </InputOTP>
-          <p class="font-pixel text-[11px] text-muted-foreground">
+          <p class="font-mono text-[11px] text-muted-foreground">
             <template v-if="!filled">заполняем…</template>
             <template v-else>шесть цифр — и репорт ушёл</template>
           </p>
@@ -201,7 +201,7 @@ onBeforeUnmount(() => {
         </p>
         <button
           type="button"
-          class="font-pixel text-[11px] text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+          class="font-mono text-[11px] text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
           @click="reset"
         >
           ↺ отправить ещё
