@@ -1,0 +1,1 @@
+var e={duration:.2,ease:`easeOut`};export{e as t};

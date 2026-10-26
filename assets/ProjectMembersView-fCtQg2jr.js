@@ -1,1 +1,0 @@
-import{k as e,mt as t,v as n}from"./runtime-core.esm-bundler-B8D2lM98.js";import{t as r}from"./ProjectSectionPage-DBYB85Am.js";var i=e({__name:`ProjectMembersView`,setup(e){return(e,i)=>(t(),n(r,{section:`members`}))}});export{i as default};
