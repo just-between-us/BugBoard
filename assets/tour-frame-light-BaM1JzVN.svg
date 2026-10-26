@@ -1,10 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" fill="none">
-  <!--
-    Запечённый кадр финала шага «Репорты» (светлая тема) для тур-стекла.
-    Геометрия один в один повторяет tour-frame-dark.svg — меняются только
-    токены: bg/card белые, border #e4e4e7, текст #09090b, muted #71717a.
-    Токены сняты из main.css (--background / --card / --muted-foreground).
-  -->
   <style>
     text { font-family: Inter, 'Segoe UI', Roboto, sans-serif; }
     .mono { font-family: 'JetBrains Mono', Consolas, monospace; }
